@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planner–Executor in Azure Foundry — No-Code Runbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F6F7F9; --card:#FFFFFF; --ink:#1B1E27; --muted:#5B6068; --line:#E4E7EC;
+    --planner:#4338CA; --planner-bg:#EEF0FE;
+    --exec:#0F766E; --exec-bg:#E6F3F1;
+    --human:#B45309; --human-bg:#FBF0DE;
+    --disp:'Space Grotesk',system-ui,sans-serif;
+    --body:'Inter',system-ui,sans-serif;
+    --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);
+    font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:760px;margin:0 auto;padding:48px 24px 80px}
+  h1{font-family:var(--disp);font-weight:600;font-size:30px;line-height:1.2;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:15px;margin:0 0 36px}
+  h2{font-family:var(--disp);font-weight:500;font-size:19px;margin:40px 0 12px;letter-spacing:-.01em}
+  .eyebrow{font-family:var(--disp);font-weight:500;font-size:12px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+  p{margin:0 0 12px}
+  strong{font-weight:500}
+  code{font-family:var(--mono);font-size:.88em;background:#EDEFF3;padding:1px 5px;border-radius:4px}
+
+  /* Hero: planner -> executors mental model */
+  .model{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin:0 0 8px}
+  .roleline{display:flex;gap:12px;align-items:flex-start;margin:0 0 14px}
+  .roleline:last-child{margin:0}
+  .pill{font-family:var(--disp);font-weight:500;font-size:13px;padding:4px 11px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+  .pill.p{background:var(--planner-bg);color:var(--planner)}
+  .pill.e{background:var(--exec-bg);color:var(--exec)}
+  .roleline p{margin:2px 0 0;font-size:15px}
+  .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px dashed var(--line)}
+  .boss{background:var(--planner-bg);color:var(--planner);font-family:var(--disp);font-weight:500;
+    font-size:13px;padding:7px 13px;border-radius:9px}
+  .arrow{color:var(--muted);font-size:15px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{background:var(--exec-bg);color:var(--exec);font-family:var(--disp);font-size:12px;
+    padding:6px 10px;border-radius:8px}
+
+  /* Steps */
+  ol.steps{list-style:none;counter-reset:s;padding:0;margin:8px 0}
+  ol.steps>li{counter-increment:s;position:relative;padding:0 0 18px 44px;margin:0}
+  ol.steps>li::before{content:counter(s);position:absolute;left:0;top:0;
+    width:30px;height:30px;border-radius:50%;background:var(--ink);color:#fff;
+    font-family:var(--disp);font-weight:500;font-size:14px;display:flex;align-items:center;justify-content:center}
+  ol.steps>li b{font-weight:500}
+  .stepnote{color:var(--muted);font-size:14px}
+
+  /* Prompt cards */
+  .prompt{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:0 0 14px;overflow:hidden}
+  .prompt .top{display:flex;justify-content:space-between;align-items:center;
+    padding:11px 14px;border-bottom:1px solid var(--line);gap:10px}
+  .prompt .who{display:flex;align-items:center;gap:9px;font-family:var(--disp);font-weight:500;font-size:14px}
+  .tag{font-size:11px;font-family:var(--disp);font-weight:500;padding:3px 8px;border-radius:6px}
+  .tag.p{background:var(--planner-bg);color:var(--planner)}
+  .tag.e{background:var(--exec-bg);color:var(--exec)}
+  .copy{font-family:var(--disp);font-size:12px;font-weight:500;border:1px solid var(--line);
+    background:#fff;color:var(--ink);padding:5px 12px;border-radius:7px;cursor:pointer;transition:.15s}
+  .copy:hover{border-color:var(--ink)}
+  .copy.done{background:var(--exec-bg);border-color:var(--exec);color:var(--exec)}
+  pre{margin:0;padding:14px;font-family:var(--mono);font-size:12.5px;line-height:1.6;
+    white-space:pre-wrap;color:#2A2E38;background:#FCFCFD}
+  .toolnote{font-size:13px;color:var(--muted);padding:0 14px 12px}
+  .toolnote b{color:var(--exec);font-weight:500}
+
+  .callout{border-radius:12px;padding:16px 18px;margin:14px 0;font-size:15px}
+  .callout.human{background:var(--human-bg);border:1px solid #EBD3A6}
+  .callout.human .eyebrow{color:var(--human)}
+  .callout.expect{background:#fff;border:1px solid var(--line)}
+  table.expect{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:6px}
+  table.expect td{padding:6px 8px;border-top:1px solid var(--line);vertical-align:top}
+  table.expect td:first-child{font-family:var(--mono);color:var(--muted);white-space:nowrap}
+  .divider{height:1px;background:var(--line);margin:44px 0}
+  .foot{color:var(--muted);font-size:13px;margin-top:8px}
+  @media (max-width:540px){h1{font-size:25px}.wrap{padding:32px 18px 60px}}
+  @media print{
+    body{background:#fff}.copy{display:none}.wrap{max-width:100%}
+    .prompt,.model,.callout.expect{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Azure Foundry · No-code lab · Day 1 · Module A1</p>
+  <h1>Planner &amp; Executor, built by clicking</h1>
+  <p class="sub">Amazon settlement reconciliation — five agents, one uploaded file, zero code.</p>
+
+  <!-- HERO: the 20-second explanation -->
+  <div class="model">
+    <div class="roleline">
+      <span class="pill p">Planner</span>
+      <p>The boss. Reads the goal, decides the order, hands each job out. Does <em>none</em> of the work itself.</p>
+    </div>
+    <div class="roleline">
+      <span class="pill e">Executor</span>
+      <p>A worker. Does exactly <em>one</em> job and reports back. Never decides what comes next.</p>
+    </div>
+    <div class="flow">
+      <span class="boss">Planner</span>
+      <span class="arrow">→</span>
+      <div class="chips">
+        <span class="chip">Ingestion</span>
+        <span class="chip">Extraction</span>
+        <span class="chip">Rule match</span>
+        <span class="chip">Smart match</span>
+      </div>
+    </div>
+  </div>
+  <p class="foot">Say it in one breath: “A head chef calls out the orders. The line cooks each cook one thing.”</p>
+
+  <div class="divider"></div>
+
+  <!-- BEFORE YOU START -->
+  <h2>Before you start (2 things)</h2>
+  <ol class="steps">
+    <li><b>A Foundry project with a model deployed.</b> <span class="stepnote">Model catalog → pick <code>gpt-4o-mini</code> → Deploy. Any chat model is fine.</span></li>
+    <li><b>The settlement file uploaded.</b> <span class="stepnote">The one sample <code>sample_amazon_settlement.txt</code>. Nothing else — the sales-order data is baked into the prompts below.</span></li>
+  </ol>
+
+  <!-- BUILD STEPS -->
+  <h2>Build it (do these in order)</h2>
+  <ol class="steps">
+    <li><b>Create the 4 Executor agents.</b> <span class="stepnote">Agents → <b>New agent</b>, four times. Name them Ingestion, Extraction, Rule match, Smart match. Pick your model for each. Paste the matching prompt from below into each one’s <b>Instructions</b> box.</span></li>
+    <li><b>Give Extraction the file.</b> <span class="stepnote">Open the Extraction agent → Tools → add <b>Code Interpreter</b> → attach <code>sample_amazon_settlement.txt</code>. This lets it read exact numbers from the real file.</span></li>
+    <li><b>Create the Planner agent.</b> <span class="stepnote">Agents → <b>New agent</b> → name it Planner → paste the Planner prompt. Give it <em>no</em> data tools — it only coordinates.</span></li>
+    <li><b>Connect the workers to the Planner.</b> <span class="stepnote">Open the Planner → Setup pane → <b>Connected agents</b> → Add → select all four executors. For each, keep the one-line “when to use” description.</span></li>
+    <li><b>Run it.</b> <span class="stepnote">Open the Planner in the playground and paste the test message below. Watch it delegate to each worker in turn.</span></li>
+  </ol>
+
+  <div class="divider"></div>
+
+  <!-- SYSTEM PROMPTS -->
+  <h2>Copy these into each agent’s Instructions</h2>
+
+  <div class="prompt">
+    <div class="top">
+      <span class="who"><span class="tag p">Planner</span> Primary agent</span>
+      <button class="copy" onclick="cp(this)">Copy</button>
+    </div>
+    <pre>You are the Planner. Your only job is to coordinate. You never do the work yourself.
+
+When given a settlement reconciliation goal, delegate in this exact order:
+1. Ask the Ingestion agent to confirm the file is present and readable.
+2. Ask the Extraction agent to parse the file into one record per order.
+3. Ask the Rule match agent to match each order with exact rules.
+4. Ask the Smart match agent to review ONLY the orders Rule match could not clear.
+
+After each step, say one line about what happened, then move to the next step.
+If any order has a variance greater than 5%, pause and ask a human to approve before continuing.
+Do not parse files, calculate, or match anything yourself. Always delegate.</pre>
+  </div>
+
+  <div class="prompt">
+    <div class="top">
+      <span class="who"><span class="tag e">Executor</span> Ingestion</span>
+      <button class="copy" onclick="cp(this)">Copy</button>
+    </div>
+    <pre>You are the Ingestion agent. You do ONE job.
+
+Confirm the uploaded Amazon settlement file is present and readable, and that it has these
+columns: order-id, sku, asin, amount-description, amount, currency.
+Reply "File OK" with the number of rows, or list what is missing.
+Do nothing else. Do not extract, calculate, or match.</pre>
+  </div>
+
+  <div class="prompt">
+    <div class="top">
+      <span class="who"><span class="tag e">Executor</span> Extraction</span>
+      <button class="copy" onclick="cp(this)">Copy</button>
+    </div>
+    <pre>You are the Extraction agent. You do ONE job.
+
+Use the code tool to read the attached Amazon settlement file. Group the rows by order-id and,
+for each order, produce one record with:
+- order id
+- ASIN
+- currency
+- net amount = sum of Principal + FBA fees + Commission + Promotion
+Mark an order as a refund if its transaction type is Refund.
+Return a simple table, one row per order. Do not match or judge anything. Just extract.</pre>
+    <div class="toolnote">Needs the <b>Code Interpreter</b> tool with the settlement file attached.</div>
+  </div>
+
+  <div class="prompt">
+    <div class="top">
+      <span class="who"><span class="tag e">Executor</span> Rule match</span>
+      <button class="copy" onclick="cp(this)">Copy</button>
+    </div>
+    <pre>You are the Rule match agent. You do ONE job: match by exact rules only. Never guess.
+
+Compare each extracted order against this sales-order reference:
+  SO-1001  order 111-2223334-4445556  expected 17.74 USD
+  SO-1002  order 111-3334445-5556667  expected 27.98 USD
+  SO-1003  order 111-4445556-6667778  expected -21.24 USD
+  SO-1004  order 111-5556667-7778889  expected 23.65 USD
+  SO-1005  order 111-6667778-8889990  expected 33.00 USD
+Shipment confirmed for orders:
+  111-2223334-4445556, 111-3334445-5556667, 111-5556667-7778889, 111-6667778-8889990
+
+Rules:
+- 2-way match = same order id AND same currency AND net amount equal to the cent.
+- 3-way match = a 2-way match PLUS a shipment confirmation for that order.
+
+Label each order MATCHED or UNRESOLVED with a one-line reason.
+List every UNRESOLVED order so the Smart match agent can review it.
+Never accept anything that is not an exact match.</pre>
+  </div>
+
+  <div class="prompt">
+    <div class="top">
+      <span class="who"><span class="tag e">Executor</span> Smart match</span>
+      <button class="copy" onclick="cp(this)">Copy</button>
+    </div>
+    <pre>You are the Smart match agent. You only review orders that Rule match could not clear.
+
+For each one, find a plausible business reason for the gap, checking:
+- currency conversion (use 1 EUR = 1.10 USD, then re-compare),
+- a seller-funded promotion that explains the gap,
+- a small fee or rounding difference within 5%.
+
+Decide:
+- If you find a reason AND the variance is 5% or less -> AUTO-RESOLVED, explain in one sentence.
+- If the variance is above 5% -> ESCALATE TO HUMAN, explain in one sentence.
+Always show your reasoning.</pre>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- TEST -->
+  <h2>The test message</h2>
+  <div class="prompt">
+    <div class="top">
+      <span class="who"><span class="tag p">Planner</span> playground</span>
+      <button class="copy" onclick="cp(this)">Copy</button>
+    </div>
+    <pre>Reconcile the uploaded Amazon settlement file against our sales orders.
+Walk through each step and tell me which orders matched, which were auto-resolved,
+and which need a human to approve.</pre>
+  </div>
+
+  <div class="callout expect">
+    <p class="eyebrow">What you should see</p>
+    <table class="expect">
+      <tr><td>1001</td><td>MATCHED — exact 2-way and 3-way</td></tr>
+      <tr><td>1002</td><td>Unresolved → Smart match: promotion, 17.9% → escalate to human</td></tr>
+      <tr><td>1003</td><td>MATCHED — refund, exact amount</td></tr>
+      <tr><td>1004</td><td>Unresolved → Smart match: EUR→USD, 0% → auto-resolved</td></tr>
+      <tr><td>1005</td><td>Unresolved → Smart match: 0.8% fee gap → auto-resolved</td></tr>
+    </table>
+  </div>
+
+  <div class="callout human">
+    <p class="eyebrow">Point at this while it runs</p>
+    <p style="margin:0">The Planner never touches data — it only says who goes next. Each worker does one thing and stops. That separation <em>is</em> the pattern. The one order that escalates shows the 5% human-approval rule doing its job.</p>
+  </div>
+
+  <div class="divider"></div>
+
+  <h2>The one honest line — your bridge to the code session</h2>
+  <p>Everything here proves the <em>pattern</em> beautifully. The only box that wants real code later is <strong>Rule match</strong>: in the portal the model writes the matching logic each run, which is fine for a demo but not exact enough for real finance. That’s exactly what we’ll replace with deterministic code next.</p>
+
+</div>
+
+<script>
+  function cp(btn){
+    var pre = btn.closest('.prompt').querySelector('pre');
+    var text = pre.innerText;
+    var done = function(){ btn.textContent='Copied'; btn.classList.add('done');
+      setTimeout(function(){ btn.textContent='Copy'; btn.classList.remove('done'); },1400); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done).catch(function(){ fallback(text,done); });
+    } else { fallback(text,done); }
+  }
+  function fallback(text,done){
+    var ta=document.createElement('textarea'); ta.value=text;
+    ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
+    ta.select(); try{ document.execCommand('copy'); done(); }catch(e){} document.body.removeChild(ta);
+  }
+</script>
+</body>
+</html>

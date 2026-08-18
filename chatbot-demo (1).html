@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ada — AI Chat Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --ink: #14161c;
+    --muted: #6b7280;
+    --hair: #e6e8ee;
+    --accent: #3355ff;
+    --accent-soft: #edf0ff;
+    --user-bubble: #3355ff;
+    --bot-bubble: #f1f2f6;
+    --amber: #ff9f1c;
+    --shadow: 0 1px 2px rgba(20,22,28,.04), 0 8px 30px rgba(20,22,28,.06);
+    --radius: 18px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 640px;
+    height: min(92vh, 780px);
+    background: var(--surface);
+    border: 1px solid var(--hair);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ---- Header ---- */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--hair);
+  }
+
+  .avatar {
+    width: 38px; height: 38px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, var(--accent), #7a5cff);
+    display: grid; place-items: center;
+    color: #fff;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .head-meta { display: flex; flex-direction: column; line-height: 1.25; }
+  .head-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    letter-spacing: -0.01em;
+  }
+  .head-status {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .signal {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 0 0 rgba(34,197,94,.5);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(34,197,94,.5); }
+    70% { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+    100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+  }
+
+  .model-chip {
+    margin-left: auto;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 5px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  /* ---- Messages ---- */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 22px 20px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    scroll-behavior: smooth;
+  }
+  .messages::-webkit-scrollbar { width: 8px; }
+  .messages::-webkit-scrollbar-thumb { background: var(--hair); border-radius: 8px; }
+
+  .row { display: flex; }
+  .row.user { justify-content: flex-end; }
+
+  .bubble {
+    max-width: 80%;
+    padding: 11px 15px;
+    font-size: 14.5px;
+    line-height: 1.5;
+    border-radius: 16px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .row.bot .bubble {
+    background: var(--bot-bubble);
+    color: var(--ink);
+    border-bottom-left-radius: 5px;
+  }
+  .row.user .bubble {
+    background: var(--user-bubble);
+    color: #fff;
+    border-bottom-right-radius: 5px;
+  }
+
+  .empty {
+    margin: auto;
+    text-align: center;
+    color: var(--muted);
+    max-width: 340px;
+  }
+  .empty h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px;
+    color: var(--ink);
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+  }
+  .empty p { font-size: 14px; line-height: 1.5; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 18px; }
+  .chip {
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--hair);
+    padding: 8px 13px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .chip:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+  /* typing */
+  .typing { display: flex; gap: 4px; padding: 14px 15px; }
+  .typing span {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted); opacity: .5;
+    animation: bounce 1.3s infinite ease-in-out;
+  }
+  .typing span:nth-child(2) { animation-delay: .18s; }
+  .typing span:nth-child(3) { animation-delay: .36s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: .35; }
+    30% { transform: translateY(-5px); opacity: .9; }
+  }
+
+  /* ---- Composer ---- */
+  .composer {
+    border-top: 1px solid var(--hair);
+    padding: 14px 16px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  .input-wrap {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--hair);
+    border-radius: 14px;
+    padding: 10px 14px;
+    transition: border-color .15s;
+  }
+  .input-wrap:focus-within { border-color: var(--accent); }
+  textarea {
+    width: 100%;
+    border: none;
+    background: transparent;
+    resize: none;
+    font-family: inherit;
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: var(--ink);
+    max-height: 120px;
+    outline: none;
+  }
+  textarea::placeholder { color: var(--muted); }
+
+  .send {
+    width: 44px; height: 44px;
+    border: none;
+    border-radius: 13px;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+    transition: transform .12s, background .15s, opacity .15s;
+  }
+  .send:hover:not(:disabled) { background: #2842e6; }
+  .send:active:not(:disabled) { transform: scale(.94); }
+  .send:disabled { opacity: .4; cursor: not-allowed; }
+  .send svg { width: 20px; height: 20px; }
+
+  .foot-note {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 0 16px 10px;
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 0; }
+    .app { height: 100vh; border-radius: 0; border: none; max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="avatar">A</div>
+      <div class="head-meta">
+        <span class="head-name">Ada</span>
+        <span class="head-status"><span class="signal"></span> Online — demo mode</span>
+      </div>
+      <span class="model-chip" id="modelChip">demo model</span>
+    </header>
+
+    <div class="messages" id="messages">
+      <div class="empty" id="empty">
+        <h2>Say hello to Ada</h2>
+        <p>A live chat demo — no API key needed. Ask anything to get started.</p>
+        <div class="chips">
+          <span class="chip">Explain recursion simply</span>
+          <span class="chip">Give me a haiku about the sea</span>
+          <span class="chip">What's a REST API?</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="composer">
+      <div class="input-wrap">
+        <textarea id="input" rows="1" placeholder="Message Ada…"></textarea>
+      </div>
+      <button class="send" id="send" aria-label="Send message" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 2 11 13"></path><path d="M22 2 15 22l-4-9-9-4 20-7z"></path>
+        </svg>
+      </button>
+    </div>
+    <div class="foot-note">Responses are AI-generated and may be inaccurate.</div>
+  </div>
+
+<script>
+/* =====================================================================
+   CONFIG — flip between the two providers here.
+   ---------------------------------------------------------------------
+   "demo"   -> uses the built-in model available inside Claude artifacts.
+               No API key required. This is what runs out of the box.
+   "openai" -> real OpenAI Chat Completions. Requires YOUR api key.
+               (See callOpenAI below — never ship a key in client HTML
+                in production; proxy it through a small backend.)
+   ===================================================================== */
+const PROVIDER = "demo";               // "demo" | "openai"
+const OPENAI_API_KEY = "";             // paste your key only if PROVIDER = "openai"
+const OPENAI_MODEL   = "gpt-4o-mini";
+
+const SYSTEM_PROMPT =
+  "You are Ada, a friendly, concise assistant in a chat demo. " +
+  "Keep replies clear and helpful. Use short paragraphs.";
+
+// ---- DOM ----
+const messagesEl = document.getElementById("messages");
+const emptyEl    = document.getElementById("empty");
+const inputEl    = document.getElementById("input");
+const sendBtn    = document.getElementById("send");
+const modelChip  = document.getElementById("modelChip");
+modelChip.textContent = PROVIDER === "openai" ? OPENAI_MODEL : "demo model";
+
+// ---- Conversation state ----
+const history = []; // [{ role: "user"|"assistant", content }]
+
+// ---- Input handling ----
+inputEl.addEventListener("input", () => {
+  inputEl.style.height = "auto";
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + "px";
+  sendBtn.disabled = inputEl.value.trim() === "";
+});
+inputEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+});
+sendBtn.addEventListener("click", handleSend);
+
+document.querySelectorAll(".chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    inputEl.value = chip.textContent;
+    inputEl.dispatchEvent(new Event("input"));
+    handleSend();
+  });
+});
+
+// ---- Render helpers ----
+function addBubble(role, text) {
+  if (emptyEl && emptyEl.parentNode) emptyEl.remove();
+  const row = document.createElement("div");
+  row.className = "row " + (role === "user" ? "user" : "bot");
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.textContent = text;
+  row.appendChild(bubble);
+  messagesEl.appendChild(row);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return bubble;
+}
+
+function showTyping() {
+  if (emptyEl && emptyEl.parentNode) emptyEl.remove();
+  const row = document.createElement("div");
+  row.className = "row bot";
+  row.id = "typing-row";
+  row.innerHTML = '<div class="bubble typing"><span></span><span></span><span></span></div>';
+  messagesEl.appendChild(row);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+function removeTyping() {
+  const t = document.getElementById("typing-row");
+  if (t) t.remove();
+}
+
+// ---- Main send flow ----
+async function handleSend() {
+  const text = inputEl.value.trim();
+  if (!text) return;
+
+  addBubble("user", text);
+  history.push({ role: "user", content: text });
+
+  inputEl.value = "";
+  inputEl.style.height = "auto";
+  sendBtn.disabled = true;
+  inputEl.disabled = true;
+
+  showTyping();
+
+  try {
+    const reply = PROVIDER === "openai"
+      ? await callOpenAI(history)
+      : await callDemo(history);
+    removeTyping();
+    addBubble("assistant", reply);
+    history.push({ role: "assistant", content: reply });
+  } catch (err) {
+    removeTyping();
+    addBubble("assistant", "Something went wrong reaching the model. " +
+      (PROVIDER === "openai"
+        ? "Check your OpenAI key and network."
+        : "Try again in a moment."));
+    console.error(err);
+  } finally {
+    inputEl.disabled = false;
+    inputEl.focus();
+  }
+}
+
+/* ---------- DEMO provider: built-in model, no key ---------- */
+async function callDemo(convo) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      system: SYSTEM_PROMPT,
+      messages: convo.map(m => ({ role: m.role, content: m.content }))
+    })
+  });
+  if (!res.ok) throw new Error("demo request failed: " + res.status);
+  const data = await res.json();
+  return data.content
+    .filter(b => b.type === "text")
+    .map(b => b.text)
+    .join("\n")
+    .trim() || "…";
+}
+
+/* ---------- OPENAI provider: real OpenAI, needs your key ----------
+   Switch PROVIDER = "openai" and set OPENAI_API_KEY above to use this. */
+async function callOpenAI(convo) {
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + OPENAI_API_KEY
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      max_tokens: 1000,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...convo
+      ]
+    })
+  });
+  if (!res.ok) throw new Error("openai request failed: " + res.status);
+  const data = await res.json();
+  return (data.choices?.[0]?.message?.content || "…").trim();
+}
+</script>
+</body>
+</html>
