@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Microsoft Foundry — Build, Ground &amp; Evaluate an Agent</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root{
+    --bg:#f6f7fb;
+    --panel:#ffffff;
+    --ink:#161b26;
+    --ink-soft:#4c5566;
+    --ink-faint:#7a8395;
+    --line:#e4e7ef;
+    --line-strong:#cdd3e0;
+    --create:#5a4be0;   /* indigo  — build   */
+    --create-bg:#efedff;
+    --know:#0e9384;     /* teal    — knowledge*/
+    --know-bg:#e3f5f2;
+    --eval:#b54708;     /* amber   — evaluate */
+    --eval-bg:#fdf0e6;
+    --code-bg:#f2f3f8;
+    --code-ink:#25304a;
+    --shadow:0 1px 2px rgba(20,25,40,.05), 0 8px 24px rgba(20,25,40,.05);
+    --radius:14px;
+  }
+  html[data-theme="dark"]{
+    --bg:#0c0f16;
+    --panel:#141924;
+    --ink:#e8ecf5;
+    --ink-soft:#a9b2c6;
+    --ink-faint:#727d94;
+    --line:#232b3a;
+    --line-strong:#313a4d;
+    --create:#9d90ff;
+    --create-bg:#1d1b34;
+    --know:#3ecfba;
+    --know-bg:#0f2a28;
+    --eval:#f0a45f;
+    --eval-bg:#2c1f12;
+    --code-bg:#0e1420;
+    --code-ink:#c7d1e6;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    line-height:1.62;font-size:16px;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- layout ---------- */
+  .wrap{display:grid;grid-template-columns:280px minmax(0,1fr);max-width:1240px;margin:0 auto;}
+  aside{
+    position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;
+    padding:26px 20px 40px;border-right:1px solid var(--line);
+  }
+  main{padding:44px 46px 90px;min-width:0}
+
+  /* ---------- brand / toc ---------- */
+  .brand{display:flex;align-items:center;gap:11px;margin-bottom:6px}
+  .brand .mark{
+    width:34px;height:34px;border-radius:9px;flex:none;
+    background:conic-gradient(from 210deg,var(--create),var(--know),var(--eval),var(--create));
+    box-shadow:var(--shadow);
+  }
+  .brand b{font-family:'Space Grotesk';font-size:16px;letter-spacing:-.01em;line-height:1.15}
+  .brand small{display:block;color:var(--ink-faint);font-weight:500;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+  .toc{margin-top:22px;font-size:13.5px}
+  .toc a{
+    display:flex;gap:10px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+    padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  }
+  .toc a:hover{background:var(--code-bg);color:var(--ink)}
+  .toc a .n{font-family:'JetBrains Mono';font-size:11px;color:var(--ink-faint);width:16px;flex:none}
+  .toc a.c:hover{border-left-color:var(--create)}
+  .toc a.k:hover{border-left-color:var(--know)}
+  .toc a.e:hover{border-left-color:var(--eval)}
+  .toggle{
+    margin-top:26px;display:inline-flex;align-items:center;gap:8px;cursor:pointer;
+    background:var(--panel);border:1px solid var(--line-strong);color:var(--ink-soft);
+    padding:8px 12px;border-radius:999px;font-size:12.5px;font-weight:500;
+  }
+  .toggle:hover{color:var(--ink)}
+
+  /* ---------- hero ---------- */
+  .hero{margin-bottom:38px}
+  .eyebrow{font-family:'JetBrains Mono';font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--know)}
+  h1{
+    font-family:'Space Grotesk';font-weight:700;letter-spacing:-.025em;
+    font-size:clamp(28px,4.4vw,44px);line-height:1.05;margin:.35em 0 .25em;
+  }
+  .lede{font-size:17px;color:var(--ink-soft);max-width:62ch}
+  .pillbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+  .pill{font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:999px;border:1px solid var(--line-strong)}
+  .pill.c{color:var(--create);background:var(--create-bg);border-color:transparent}
+  .pill.k{color:var(--know);background:var(--know-bg);border-color:transparent}
+  .pill.e{color:var(--eval);background:var(--eval-bg);border-color:transparent}
+
+  /* ---------- lifecycle spine ---------- */
+  .spine{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin:6px 0 44px;
+    border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--panel);
+  }
+  .spine div{padding:15px 14px;border-right:1px solid var(--line);position:relative}
+  .spine div:last-child{border-right:none}
+  .spine .st{font-family:'JetBrains Mono';font-size:11px;color:var(--ink-faint)}
+  .spine .lb{font-family:'Space Grotesk';font-weight:600;font-size:14.5px;margin-top:3px}
+  .spine div::before{content:"";position:absolute;left:0;top:0;height:3px;width:100%}
+  .spine div:nth-child(1)::before{background:var(--create)}
+  .spine div:nth-child(2)::before{background:var(--know)}
+  .spine div:nth-child(3)::before{background:linear-gradient(90deg,var(--know),var(--eval))}
+  .spine div:nth-child(4)::before{background:var(--eval)}
+  .spine div:nth-child(5)::before{background:var(--eval)}
+
+  /* ---------- sections ---------- */
+  section{margin-bottom:52px;scroll-margin-top:24px}
+  h2{
+    font-family:'Space Grotesk';font-weight:700;letter-spacing:-.02em;
+    font-size:25px;margin:0 0 4px;display:flex;align-items:center;gap:12px;
+  }
+  h2 .tag{
+    font-family:'JetBrains Mono';font-size:12px;font-weight:500;padding:3px 9px;border-radius:7px;
+    color:#fff;flex:none;
+  }
+  .tag.c{background:var(--create)} .tag.k{background:var(--know)} .tag.e{background:var(--eval)}
+  h3{font-family:'Space Grotesk';font-weight:600;font-size:17.5px;margin:30px 0 8px}
+  p{margin:0 0 14px}
+  a.inl{color:var(--create);text-decoration:none;border-bottom:1px solid var(--line-strong)}
+  a.inl:hover{border-bottom-color:var(--create)}
+
+  /* ---------- steps ---------- */
+  ol.steps{list-style:none;counter-reset:s;padding:0;margin:18px 0}
+  ol.steps>li{
+    counter-increment:s;position:relative;padding:2px 0 20px 52px;
+    border-left:2px solid var(--line);margin-left:15px;
+  }
+  ol.steps>li:last-child{border-left-color:transparent}
+  ol.steps>li::before{
+    content:counter(s);position:absolute;left:-16px;top:-2px;
+    width:31px;height:31px;border-radius:50%;background:var(--panel);
+    border:2px solid var(--create);color:var(--create);
+    font-family:'JetBrains Mono';font-weight:600;font-size:13px;
+    display:grid;place-items:center;
+  }
+  section.know ol.steps>li::before{border-color:var(--know);color:var(--know)}
+  section.eval ol.steps>li::before{border-color:var(--eval);color:var(--eval)}
+  ol.steps b{font-weight:600}
+  ol.steps .hint{color:var(--ink-faint);font-size:14px}
+
+  ul.tick{list-style:none;padding:0;margin:14px 0}
+  ul.tick li{position:relative;padding:4px 0 4px 26px}
+  ul.tick li::before{content:"▸";position:absolute;left:4px;color:var(--know);font-size:13px;top:5px}
+
+  /* ---------- callouts ---------- */
+  .note{
+    border:1px solid var(--line);border-left:4px solid var(--create);
+    background:var(--panel);border-radius:10px;padding:14px 18px;margin:18px 0;font-size:14.5px;
+  }
+  .note.tip{border-left-color:var(--know)}
+  .note.warn{border-left-color:var(--eval)}
+  .note b{font-family:'Space Grotesk';display:block;margin-bottom:3px;font-size:13px;letter-spacing:.02em}
+  .note.warn b{color:var(--eval)} .note.tip b{color:var(--know)} .note b{color:var(--create)}
+
+  /* ---------- code ---------- */
+  .code{
+    position:relative;background:var(--code-bg);border:1px solid var(--line);
+    border-radius:12px;margin:16px 0;overflow:hidden;
+  }
+  .code .hd{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:8px 14px;border-bottom:1px solid var(--line);
+    font-family:'JetBrains Mono';font-size:11.5px;color:var(--ink-faint);
+  }
+  .code pre{margin:0;padding:16px 18px;overflow-x:auto}
+  .code code{font-family:'JetBrains Mono';font-size:13px;color:var(--code-ink);line-height:1.7;white-space:pre}
+  .copy{
+    cursor:pointer;background:transparent;border:1px solid var(--line-strong);color:var(--ink-faint);
+    font-family:'JetBrains Mono';font-size:11px;padding:3px 9px;border-radius:6px;
+  }
+  .copy:hover{color:var(--ink);border-color:var(--ink-faint)}
+
+  /* ---------- tables ---------- */
+  .tblwrap{overflow-x:auto;margin:18px 0;border:1px solid var(--line);border-radius:12px}
+  table{border-collapse:collapse;width:100%;font-size:14px;min-width:520px}
+  th,td{text-align:left;padding:11px 15px;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{
+    background:var(--code-bg);font-family:'Space Grotesk';font-weight:600;font-size:13px;
+    color:var(--ink-soft);letter-spacing:.02em;
+  }
+  tbody tr:last-child td{border-bottom:none}
+  td b{font-weight:600}
+  .chip{display:inline-block;font-family:'JetBrains Mono';font-size:11px;padding:2px 7px;border-radius:5px;background:var(--know-bg);color:var(--know)}
+  .chip.e{background:var(--eval-bg);color:var(--eval)}
+  .chip.c{background:var(--create-bg);color:var(--create)}
+
+  /* ---------- sources ---------- */
+  .src{font-size:13.5px}
+  .src a{display:block;color:var(--ink-soft);text-decoration:none;padding:7px 0;border-bottom:1px solid var(--line)}
+  .src a:hover{color:var(--create)}
+  .src a span{font-family:'JetBrains Mono';font-size:11px;color:var(--ink-faint)}
+
+  footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--line);color:var(--ink-faint);font-size:13px}
+
+  /* ---------- responsive ---------- */
+  @media(max-width:920px){
+    .wrap{grid-template-columns:1fr}
+    aside{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line)}
+    .toc{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+    main{padding:30px 22px 70px}
+    .spine{grid-template-columns:1fr 1fr}
+    .spine div{border-right:none;border-bottom:1px solid var(--line)}
+  }
+  @media print{
+    aside,.toggle{display:none}
+    .wrap{display:block;max-width:none}
+    main{padding:0}
+    .code,.note,section{break-inside:avoid}
+    body{font-size:12pt}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside>
+    <div class="brand">
+      <div class="mark"></div>
+      <div><b>Microsoft&nbsp;Foundry</b><small>Agent lab · handout</small></div>
+    </div>
+    <nav class="toc">
+      <a class="c" href="#overview"><span class="n">00</span>Overview &amp; concepts</a>
+      <a class="c" href="#prereq"><span class="n">01</span>Prerequisites</a>
+      <a class="c" href="#create"><span class="n">02</span>Create a simple agent</a>
+      <a class="k" href="#knowledge"><span class="n">03</span>Add knowledge (grounding)</a>
+      <a class="k" href="#tools"><span class="n">04</span>Other tools &amp; options</a>
+      <a class="e" href="#test"><span class="n">05</span>Test in the playground</a>
+      <a class="e" href="#eval"><span class="n">06</span>Evaluation &amp; observability</a>
+      <a class="c" href="#code"><span class="n">07</span>Code-first (Python)</a>
+      <a class="k" href="#lab"><span class="n">08</span>Classroom lab flow</a>
+      <a class="e" href="#trouble"><span class="n">09</span>Troubleshooting</a>
+      <a href="#sources"><span class="n">10</span>Sources</a>
+    </nav>
+    <div class="toggle" id="themeBtn">🌗 <span>Toggle theme</span></div>
+  </aside>
+
+  <!-- ===================== MAIN ===================== -->
+  <main>
+    <div class="hero">
+      <div class="eyebrow">Trainer handout · updated Aug 2026</div>
+      <h1>Build, ground &amp; evaluate<br>an agent in Microsoft Foundry</h1>
+      <p class="lede">A single, followable path from an empty project to a working, knowledge-grounded agent you can score for quality and safety — all inside the Foundry portal, with a code-first option at the end.</p>
+      <div class="pillbar">
+        <span class="pill c">Build</span>
+        <span class="pill k">Ground with knowledge</span>
+        <span class="pill e">Evaluate &amp; observe</span>
+      </div>
+    </div>
+
+    <div class="spine">
+      <div><div class="st">step 02</div><div class="lb">Create</div></div>
+      <div><div class="st">step 03–04</div><div class="lb">Ground</div></div>
+      <div><div class="st">step 05</div><div class="lb">Test</div></div>
+      <div><div class="st">step 06</div><div class="lb">Evaluate</div></div>
+      <div><div class="st">step 06</div><div class="lb">Monitor</div></div>
+    </div>
+
+    <!-- 00 OVERVIEW -->
+    <section id="overview">
+      <h2><span class="tag c">00</span>Overview &amp; concepts</h2>
+      <p><b>Microsoft Foundry</b> is Microsoft's platform for building, grounding, and governing AI apps and agents. It was previously called <b>Azure AI Foundry</b> and was renamed at Ignite in November 2025 — the portal and docs now say "Microsoft Foundry," but you'll still see the old name in older tutorials and some URLs.</p>
+      <p>An <b>agent</b> is simply a <i>model + instructions + tools</i>. Unlike a plain chatbot that only generates text, an agent can call tools, retrieve from a knowledge base, and take actions to fulfil a request. You define it once, and the Agent Service keeps its behaviour consistent across conversations.</p>
+
+      <h3>Two ways to build</h3>
+      <ul class="tick">
+        <li><b>Prompt agents (portal-first):</b> create and configure an agent interactively in the portal, test it in the playground, then call it from your app. Best for getting started, internal tools, and most production agents that don't need custom orchestration.</li>
+        <li><b>Hosted agents (code-first):</b> write the agent with a framework (Microsoft Agent Framework, LangGraph, OpenAI Agents SDK, Anthropic Agent SDK, or your own code) and deploy it to a managed runtime with its own identity and endpoint.</li>
+      </ul>
+
+      <div class="note warn">
+        <b>Version note — two API generations</b>
+        The classic Assistants-based API is being retired (the underlying Assistants API retires <b>26 Aug 2026</b>; the classic agent service retirement is announced for <b>31 Mar 2027</b>). The current SDK is <b>azure-ai-projects 2.x</b> and is <i>not</i> compatible with 1.x samples that use threads/runs/agent GUIDs. Always check imports before copying older code, and prefer the current official quickstart.
+      </div>
+
+      <p>The full agent lifecycle in Foundry is: <b>Create → Test → Trace → Evaluate → Optimize → Publish → Monitor.</b> This handout walks the first six.</p>
+    </section>
+
+    <!-- 01 PREREQ -->
+    <section id="prereq">
+      <h2><span class="tag c">01</span>Prerequisites</h2>
+      <ul class="tick">
+        <li>An <b>Azure subscription</b> with quota for a chat model in your region.</li>
+        <li>A <b>Microsoft Foundry project</b> (the portal can create one for you during the agent flow).</li>
+        <li>A deployed <b>chat-capable model</b> — e.g. <span class="chip c">gpt-4o-mini</span> <span class="chip c">gpt-5-mini</span> <span class="chip c">gpt-5.4-mini</span>. Foundry's catalogue also includes Anthropic, Meta, Google, and other providers.</li>
+        <li>The <b>Foundry User</b> role on the project (needed to create/edit agents in the portal or SDK).</li>
+      </ul>
+      <div class="note">
+        <b>RBAC roles were renamed</b>
+        <b>Foundry User / Owner / Account Owner / Project Manager</b> were previously <b>Azure AI User / Owner / Account Owner / Project Manager</b>. The role IDs and permissions are unchanged — you may still see the old names in some places while the rename rolls out. A missing <b>Foundry User</b> role is the usual cause of "permission denied" when creating agents.
+      </div>
+      <div class="note tip">
+        <b>Use the new portal</b>
+        Make sure the <b>New Foundry</b> toggle is on. If you don't see <b>Build</b>, <b>Operate</b>, and <b>Admin</b> in the navigation, switch to the new experience — screens and menu locations differ from the classic portal.
+      </div>
+    </section>
+
+    <!-- 02 CREATE -->
+    <section id="create">
+      <h2><span class="tag c">02</span>Create a simple agent (portal)</h2>
+      <ol class="steps">
+        <li><b>Open the Foundry portal</b> and sign in. If you're inside a project, click <b>Microsoft Foundry</b> in the top-left breadcrumb to return Home.</li>
+        <li><b>Start the agent flow.</b> Choose <b>Create an agent</b> (or <b>Start building → Create agent</b>). If you don't have a project yet, enter a project name and select <b>Create</b>; wait for the account and project to provision.</li>
+        <li><b>Land in the agent playground.</b> A deployed model is usually pre-selected. If prompted, deploy one (e.g. <span class="chip c">gpt-4o-mini</span>) with a couple of clicks.</li>
+        <li><b>Name the agent</b> — for a class demo, something like <span class="chip c">expense-agent</span> or <span class="chip c">it-support-agent</span>.</li>
+        <li><b>Write the instructions</b> (the system prompt). Be specific about scope and refusal behaviour, for example:
+          <div class="code">
+            <div class="hd">instructions.txt <button class="copy">Copy</button></div>
+            <pre><code>You are an IT support assistant for Contoso.
+Answer only from the attached policy documents.
+If the answer isn't in the documents, say you don't know
+and suggest opening a ticket. Keep replies short and cite the source.</code></pre>
+          </div>
+        </li>
+        <li><b>Chat to test.</b> Send a prompt in the playground and confirm the agent responds. <span class="hint">At this point the agent works, but it only knows what the model already knows — next we give it your data.</span></li>
+      </ol>
+    </section>
+
+    <!-- 03 KNOWLEDGE -->
+    <section id="knowledge" class="know">
+      <h2><span class="tag k">03</span>Add knowledge (grounding)</h2>
+      <p>Grounding lets the agent answer from <i>your</i> documents instead of only its training data, using Retrieval-Augmented Generation (RAG). Foundry gives you two levels: a quick <b>File Search</b> for a document or two, and enterprise-grade <b>Foundry IQ</b> for real data estates.</p>
+
+      <h3>Option A — File Search (simplest, great for class demos)</h3>
+      <ol class="steps">
+        <li>In the agent playground, open the <b>Knowledge</b> section and choose to add a knowledge source.</li>
+        <li>Select <b>Files</b> and <b>upload</b> a PDF or Word document (e.g. an expense policy). Foundry chunks, embeds, and indexes it for you.</li>
+        <li>Save, then ask a grounded question — e.g. <i>"What's the maximum I can claim for meals?"</i> The reply should come straight from the uploaded document.</li>
+      </ol>
+      <div class="note tip">
+        <b>Why start here</b>
+        No Azure AI Search service, no extra provisioning — one upload and you have a working RAG demo. Perfect for the first 20 minutes of a lab.
+      </div>
+
+      <h3>Option B — Foundry IQ (enterprise knowledge layer)</h3>
+      <p><b>Foundry IQ</b> is a dedicated knowledge layer built on <b>Azure AI Search</b> agentic retrieval. Instead of hand-building a RAG pipeline per source, you create a <b>knowledge base</b> that unifies many sources behind one retrieval endpoint. It plans the query, searches, reranks, and returns a <b>cited, permission-aware</b> answer. One knowledge base can be shared by many agents.</p>
+      <ul class="tick">
+        <li><b>Sources:</b> Azure Blob Storage, SharePoint, OneLake, Azure SQL, File Search, public web (Web IQ), and MCP servers.</li>
+        <li><b>Connection:</b> the knowledge base exposes an <b>MCP</b> endpoint; you attach it to an agent directly or via a <b>Toolbox</b> (a curated set of tools behind one endpoint).</li>
+        <li><b>Retrieval quality:</b> agentic retrieval breaks complex questions into sub-queries, runs parallel searches, and aggregates — with citations back to source documents.</li>
+      </ul>
+      <ol class="steps">
+        <li>In <b>Azure AI Search</b>, enable a system-assigned managed identity and role-based access; create a <b>knowledge base</b> with one or more knowledge sources.</li>
+        <li>In your Foundry project, deploy a chat model the knowledge base can use to synthesise answers (e.g. <span class="chip">gpt-5.4-mini</span>).</li>
+        <li>Create a <b>project connection</b> to the knowledge base (managed-identity auth recommended).</li>
+        <li>Add the knowledge base to the agent as an <b>MCP tool</b> / <b>Toolbox</b>, so it can call <span class="chip">knowledge_base_retrieve</span>.</li>
+        <li>Grant the <b>agent's</b> managed identity the <b>Search Index Data Reader</b> role on the search service, then test with a grounded question.</li>
+      </ol>
+      <div class="note warn">
+        <b>Common 403s</b>
+        Grounding failures are almost always permissions: the search service identity needs access to the model, and the agent identity needs <b>Search Index Data Reader</b> on the search service. Use the <b>2026-05-01-preview</b> API version for the knowledge-base MCP endpoint.
+      </div>
+
+      <div class="tblwrap">
+        <table>
+          <thead><tr><th>&nbsp;</th><th>File Search</th><th>Foundry IQ</th></tr></thead>
+          <tbody>
+            <tr><td><b>Setup effort</b></td><td>Upload a file</td><td>Search service + knowledge base + connection</td></tr>
+            <tr><td><b>Sources</b></td><td>A few uploaded documents</td><td>Blob, SharePoint, OneLake, SQL, web, MCP</td></tr>
+            <tr><td><b>Retrieval</b></td><td>Vector / hybrid over your files</td><td>Agentic multi-source, rerank, iterative</td></tr>
+            <tr><td><b>Permissions</b></td><td>Basic</td><td>Permission-aware, per-user trimming</td></tr>
+            <tr><td><b>Sharing</b></td><td>Per agent</td><td>One base → many agents</td></tr>
+            <tr><td><b>Best for</b></td><td>Demos, small doc sets</td><td>Production, enterprise data estates</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 04 TOOLS -->
+    <section id="tools" class="know">
+      <h2><span class="tag k">04</span>Other tools &amp; options</h2>
+      <p>Beyond knowledge, an agent's power comes from the tools you attach in the playground:</p>
+      <ul class="tick">
+        <li><b>Web search / Web IQ</b> — live grounding on public web data with source attribution.</li>
+        <li><b>Code Interpreter</b> — the agent writes and runs its own Python to compute, parse files, or make charts.</li>
+        <li><b>Functions &amp; MCP tools</b> — call your own APIs, remote MCP servers (from the Add Tools catalogue), or custom MCP servers hosted on Azure Functions.</li>
+        <li><b>Memory</b> (preview) — persist context across sessions so the agent remembers earlier conversations.</li>
+        <li><b>Toolbox</b> — define a set of tools once, version it, and expose it to any MCP-compatible agent through a single endpoint.</li>
+      </ul>
+      <div class="note tip">
+        <b>Teaching point</b>
+        "Knowledge" answers <i>what does my data say?</i>; "tools" answer <i>what action can the agent take?</i> Most useful agents combine both — e.g. retrieve a policy (knowledge) then file a ticket (function tool).
+      </div>
+    </section>
+
+    <!-- 05 TEST -->
+    <section id="test" class="eval">
+      <h2><span class="tag e">05</span>Test in the playground</h2>
+      <ol class="steps">
+        <li><b>Chat multi-turn.</b> The playground keeps conversation history, so follow-ups like "tell me more about that" resolve against context. Use <b>New chat</b> to clear history and test cold starts.</li>
+        <li><b>Inspect the run.</b> Open <b>Thread logs</b> in an active thread to see each step — model calls, tool invocations, and retrieved chunks — so you can see <i>why</i> the agent answered as it did.</li>
+        <li><b>Exercise tools.</b> MCP and function tools can be validated directly in the playground before you publish, confirming connectivity, permissions, and behaviour.</li>
+      </ol>
+      <div class="note">
+        <b>Rate limits</b>
+        If the agent stops responding, you've likely hit a model quota/rate limit — wait a few seconds and retry, or deploy the model in a region with more quota.
+      </div>
+    </section>
+
+    <!-- 06 EVAL -->
+    <section id="eval" class="eval">
+      <h2><span class="tag e">06</span>Evaluation &amp; observability</h2>
+      <p>Foundry's observability rests on four continuous activities: <b>Trace</b> (what happened in a run), <b>Evaluate</b> (is it good?), <b>Monitor</b> (how is it behaving over time?), and <b>Optimize</b> (make it better). Evaluations, monitoring, and tracing reached general availability in March 2026 and publish directly into <b>Azure Monitor / Application Insights</b>.</p>
+
+      <h3>Quick evals in the playground</h3>
+      <ol class="steps">
+        <li>Evaluations in the agents playground are <b>on by default</b> for Foundry projects (billed by consumption).</li>
+        <li>Open <b>Thread logs → Metrics</b> and select the metrics you care about, then chat with the agent.</li>
+        <li>Review the scores next to the thread. <span class="hint">Playground results are kept for ~24 hours before expiring.</span></li>
+      </ol>
+
+      <h3>Built-in evaluators</h3>
+      <div class="tblwrap">
+        <table>
+          <thead><tr><th>Category</th><th>Evaluators (examples)</th><th>Answers…</th></tr></thead>
+          <tbody>
+            <tr><td><span class="chip c">Quality</span></td><td>Coherence, Fluency</td><td>Is the writing clear and well-formed?</td></tr>
+            <tr><td><span class="chip">RAG</span></td><td>Groundedness, Relevance</td><td>Is the answer supported by retrieved sources?</td></tr>
+            <tr><td><span class="chip e">Safety</span></td><td>Hate/unfairness, Violence, Protected material</td><td>Is the output safe and compliant?</td></tr>
+            <tr><td><span class="chip c">Agent</span></td><td>Intent resolution, Tool-call accuracy, Task adherence/completion, Response completeness</td><td>Did the agent do the right thing, the right way?</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>You can also write <b>custom evaluators</b> for domain-specific rules, and use the <b>Agent Optimizer</b> to automatically improve a hosted agent's instructions based on evaluation results.</p>
+
+      <h3>Offline vs continuous</h3>
+      <ul class="tick">
+        <li><b>Offline (pre-deployment gate):</b> build a test dataset, run evaluators, review scores, and only ship if thresholds pass. Ideal to wire into CI/CD so a bad build fails promotion.</li>
+        <li><b>Continuous:</b> sample live production traffic (a modest <b>5–10%</b> is a practical start) and score it in near-real-time — groundedness, task adherence, tool-call accuracy, safety — writing results next to your traces.</li>
+      </ul>
+      <div class="note warn">
+        <b>Permission for continuous evaluation</b>
+        The project's <b>managed identity</b> must have the <b>Foundry User</b> role on the Foundry resource, or continuous-evaluation rules silently do nothing. Assign it in the Azure portal under <b>Access control (IAM)</b>.
+      </div>
+      <div class="note tip">
+        <b>Where to watch it</b>
+        The <b>Agent Monitoring Dashboard</b> in the portal shows token usage, latency, success rates, and evaluation trends. Because everything lands in Azure Monitor, you can also set alerts (e.g. page someone when groundedness drops below a threshold).
+      </div>
+    </section>
+
+    <!-- 07 CODE -->
+    <section id="code">
+      <h2><span class="tag c">07</span>Code-first (Python)</h2>
+      <p>The same agent can be created from code with <b>azure-ai-projects 2.x</b>. Install, sign in, then point the client at your project endpoint. Treat this as a shape to adapt — confirm the exact current calls against the official quickstart, since the 2.x API differs from older 1.x samples.</p>
+      <div class="code">
+        <div class="hd">setup.sh <button class="copy">Copy</button></div>
+        <pre><code>pip install azure-ai-projects azure-identity
+az login                      # authenticate to your subscription</code></pre>
+      </div>
+      <div class="code">
+        <div class="hd">create_agent.py — illustrative <button class="copy">Copy</button></div>
+        <pre><code>import os
+from azure.ai.projects import AIProjectClient
+from azure.identity import DefaultAzureCredential
+
+# Project endpoint: Foundry portal → project → Overview
+with (
+    DefaultAzureCredential() as credential,
+    AIProjectClient(
+        endpoint=os.environ["FOUNDRY_PROJECT_ENDPOINT"],
+        credential=credential,
+    ) as project,
+):
+    agent = project.agents.create_version(
+        agent_name="it-support-agent",
+        model=os.environ["MODEL_DEPLOYMENT_NAME"],   # e.g. gpt-4o-mini
+        instructions=(
+            "You are an IT support assistant. "
+            "Answer only from the connected knowledge base and cite sources."
+        ),
+        # tools=[ ... attach File Search / MCP knowledge-base tool here ... ]
+    )
+    print("Created:", agent.name)</code></pre>
+      </div>
+      <div class="note">
+        <b>Endpoints you'll need</b>
+        The <b>project endpoint</b> comes from the project's <b>Overview</b> page; the <b>model deployment name</b> from <b>Build → Deployments</b>.
+      </div>
+    </section>
+
+    <!-- 08 LAB -->
+    <section id="lab" class="know">
+      <h2><span class="tag k">08</span>Suggested classroom lab flow (~60 min)</h2>
+      <ol class="steps">
+        <li><b>0–10 min — Provision.</b> Everyone creates a project and confirms a model deployment + <b>Foundry User</b> role.</li>
+        <li><b>10–25 min — Build.</b> Create the agent, write scoped instructions, chat once to confirm it works.</li>
+        <li><b>25–40 min — Ground.</b> Upload a policy PDF via <b>File Search</b>; ask a question that only the document can answer; open <b>Thread logs</b> to show the retrieved chunk.</li>
+        <li><b>40–52 min — Evaluate.</b> Turn on <b>Groundedness</b> + <b>Relevance</b> metrics, ask one in-scope and one out-of-scope question, and compare scores.</li>
+        <li><b>52–60 min — Discuss.</b> Where would Foundry IQ replace File Search? What thresholds would you gate a release on? Preview continuous evaluation.</li>
+      </ol>
+      <div class="note tip">
+        <b>Stretch goal</b>
+        Have a fast group swap File Search for a <b>Foundry IQ</b> knowledge base and add a second data source, then re-run the same evaluation to see whether groundedness improves.
+      </div>
+    </section>
+
+    <!-- 09 TROUBLE -->
+    <section id="trouble" class="eval">
+      <h2><span class="tag e">09</span>Troubleshooting quick hits</h2>
+      <div class="tblwrap">
+        <table>
+          <thead><tr><th>Symptom</th><th>Likely cause &amp; fix</th></tr></thead>
+          <tbody>
+            <tr><td>Can't create/edit agents; 403</td><td>Missing <b>Foundry User</b> role on the project. Assign under Access control (IAM).</td></tr>
+            <tr><td>Agent stops responding mid-demo</td><td>Model quota / rate limit — wait and retry, or deploy in a higher-quota region.</td></tr>
+            <tr><td>Grounding returns nothing / 403 from search</td><td>Agent identity lacks <b>Search Index Data Reader</b>; or wrong API version — use <b>2026-05-01-preview</b> for the KB MCP endpoint.</td></tr>
+            <tr><td>Old sample code won't run</td><td>1.x vs 2.x mismatch — the new SDK drops threads/runs/GUIDs. Check imports and use the current quickstart.</td></tr>
+            <tr><td>Continuous evals produce no results</td><td>Project managed identity needs the <b>Foundry User</b> role on the Foundry resource.</td></tr>
+            <tr><td>Menus don't match the docs</td><td>You're on the classic portal — switch the <b>New Foundry</b> toggle on.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 10 SOURCES -->
+    <section id="sources">
+      <h2><span class="tag c">10</span>Sources &amp; further reading</h2>
+      <div class="src">
+        <a href="https://learn.microsoft.com/en-us/azure/foundry/agents/overview" target="_blank">What is Microsoft Foundry Agent Service? <span>learn.microsoft.com</span></a>
+        <a href="https://learn.microsoft.com/en-us/azure/foundry/quickstarts/quickstarts" target="_blank">Microsoft Foundry quickstarts <span>learn.microsoft.com</span></a>
+        <a href="https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/what-is-foundry-iq" target="_blank">What is Foundry IQ? <span>learn.microsoft.com</span></a>
+        <a href="https://learn.microsoft.com/en-us/azure/foundry/agents/quickstarts/quickstart-foundry-iq-hosted-agent" target="_blank">Quickstart: add a Foundry IQ knowledge base to a hosted agent <span>learn.microsoft.com</span></a>
+        <a href="https://learn.microsoft.com/en-us/azure/foundry/concepts/observability" target="_blank">Observability in generative AI <span>learn.microsoft.com</span></a>
+        <a href="https://learn.microsoft.com/en-us/azure/foundry/observability/how-to/evaluate-agent" target="_blank">Evaluate your AI agents <span>learn.microsoft.com</span></a>
+        <a href="https://learn.microsoft.com/en-us/azure/foundry/observability/how-to/how-to-monitor-agents-dashboard" target="_blank">Monitor agents with the Agent Monitoring Dashboard <span>learn.microsoft.com</span></a>
+        <a href="https://learn.microsoft.com/en-us/training/paths/develop-ai-agents-azure/" target="_blank">Training path: Develop AI Agents on Azure <span>learn.microsoft.com</span></a>
+      </div>
+      <footer>
+        Prepared as a training handout · Microsoft Foundry (formerly Azure AI Foundry). Product names, portal layouts, preview features, and RBAC role names change frequently — verify against the linked Microsoft Learn pages before delivery.
+      </footer>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // theme toggle (persists if storage is available)
+  (function(){
+    var root=document.documentElement, btn=document.getElementById('themeBtn');
+    try{ var s=localStorage.getItem('foundry-theme'); if(s) root.setAttribute('data-theme',s); }catch(e){}
+    btn.addEventListener('click',function(){
+      var next=root.getAttribute('data-theme')==='dark'?'light':'dark';
+      root.setAttribute('data-theme',next);
+      try{ localStorage.setItem('foundry-theme',next); }catch(e){}
+    });
+  })();
+  // copy buttons
+  document.querySelectorAll('.code .copy').forEach(function(b){
+    b.addEventListener('click',function(){
+      var code=b.closest('.code').querySelector('code').innerText;
+      navigator.clipboard.writeText(code).then(function(){
+        var t=b.textContent; b.textContent='Copied ✓';
+        setTimeout(function(){ b.textContent=t; },1400);
+      });
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Microsoft Foundry Prompt Flow Retirement Guide</title>
+  <style>
+    :root{--navy:#102a43;--blue:#2563eb;--sky:#eaf2ff;--green:#0f766e;--amber:#b45309;--red:#b42318;--ink:#243b53;--muted:#627d98;--line:#d9e2ec;--paper:#fff;--bg:#f4f7fb}
+    *{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.62}
+    header{background:linear-gradient(125deg,#102a43,#185abc 62%,#18a0ae);color:#fff;padding:58px 24px}
+    .hero,.layout{max-width:1180px;margin:auto}.eyebrow{font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#bfe5ff}.hero h1{font-size:clamp(2rem,5vw,3.65rem);line-height:1.08;margin:.4rem 0 1rem}.hero p{max-width:850px;font-size:1.15rem}.date{display:inline-block;background:#fff;color:#102a43;padding:9px 14px;border-radius:999px;font-weight:700;margin-top:10px}
+    .layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:28px;padding:30px 20px 70px}.toc{position:sticky;top:18px;align-self:start;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px}.toc strong{display:block;margin-bottom:8px;color:var(--navy)}.toc a{display:block;color:#486581;text-decoration:none;padding:7px 8px;border-radius:8px}.toc a:hover{background:var(--sky);color:var(--blue)}main{min-width:0}
+    section{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:28px;margin-bottom:22px;box-shadow:0 5px 20px rgba(16,42,67,.05)}h2{color:var(--navy);margin-top:0;font-size:1.65rem}h3{color:#174ea6;margin-top:1.5rem}a{color:#165dcc}code{background:#eef2f7;padding:2px 6px;border-radius:5px}pre{background:#0b1f33;color:#e8f1fa;padding:18px;border-radius:12px;overflow:auto;line-height:1.45}
+    .answer{border-left:6px solid var(--red);background:#fff4f2;padding:20px;border-radius:12px}.answer b{font-size:1.15rem;color:var(--red)}.callout{padding:18px;border-radius:12px;margin:16px 0}.warning{background:#fff7e6;border-left:5px solid #f59e0b}.info{background:#eaf2ff;border-left:5px solid var(--blue)}.success{background:#e9fbf6;border-left:5px solid var(--green)}
+    .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card{border:1px solid var(--line);border-radius:13px;padding:17px}.card .num{font-size:1.8rem;font-weight:800;color:var(--blue)}.card h3{margin:.2rem 0;color:var(--navy)}
+    table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.96rem}th{background:#163e69;color:#fff;text-align:left}th,td{border:1px solid var(--line);padding:12px;vertical-align:top}tr:nth-child(even) td{background:#f8fafc}
+    .flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:10px;align-items:center;margin:20px 0}.flow div:not(.arrow){border:2px solid #a8c7fa;background:#f5f9ff;border-radius:13px;text-align:center;padding:20px 12px;font-weight:700}.arrow{color:var(--blue);font-size:1.7rem;font-weight:900}
+    .checklist{list-style:none;padding:0}.checklist li{padding:10px 8px 10px 38px;position:relative;border-bottom:1px solid #edf2f7}.checklist li:before{content:'✓';position:absolute;left:8px;color:var(--green);font-weight:900;font-size:1.15rem}.tag{display:inline-block;padding:4px 9px;border-radius:999px;font-size:.82rem;font-weight:700}.yes{background:#d9f9ef;color:#096b57}.no{background:#fee4e2;color:#9b1c13}.partial{background:#fff1cc;color:#8a4b08}
+    footer{text-align:center;color:var(--muted);padding:20px 20px 45px}.small{color:var(--muted);font-size:.9rem}
+    @media(max-width:850px){.layout{grid-template-columns:1fr}.toc{position:relative;top:0}.cards{grid-template-columns:1fr}.flow{grid-template-columns:1fr}.arrow{transform:rotate(90deg);text-align:center}section{padding:21px}table{display:block;overflow-x:auto}}
+    @media print{.toc{display:none}.layout{display:block;padding:0}section{box-shadow:none;break-inside:avoid}header{padding:30px 20px}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <div class="eyebrow">Microsoft Foundry migration note</div>
+    <h1>Is Workflow Support Being Stopped?</h1>
+    <p>What is actually retiring, what replaces it, and what teams must do with existing Prompt Flow applications and deployments.</p>
+    <span class="date">Verified: 20 August 2026</span>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="Contents">
+    <strong>Contents</strong>
+    <a href="#short-answer">1. Short answer</a>
+    <a href="#timeline">2. Timeline</a>
+    <a href="#existing">3. Existing flows</a>
+    <a href="#alternative">4. Alternative</a>
+    <a href="#mapping">5. Concept mapping</a>
+    <a href="#migration">6. Migration plan</a>
+    <a href="#hosting">7. Deployment choices</a>
+    <a href="#decision">8. What should I do?</a>
+    <a href="#faq">9. FAQ</a>
+    <a href="#sources">10. Official sources</a>
+  </nav>
+
+  <main>
+    <section id="short-answer">
+      <h2>1. Short answer</h2>
+      <div class="answer"><b>Yes—but it is specifically Prompt Flow that is retiring.</b><br>
+      Microsoft will retire <strong>Prompt Flow in Microsoft Foundry and Azure Machine Learning on 20 April 2027</strong>. Microsoft is not stopping all workflow or orchestration capability in Foundry. The recommended replacement is <strong>Microsoft Agent Framework</strong>.</div>
+      <div class="callout info"><strong>Terminology:</strong> A “flow” is a general executable AI workflow. <em>Prompt Flow</em> is the particular visual/YAML authoring product being retired. Agent Framework provides the replacement orchestration approach using Python or .NET code.</div>
+    </section>
+
+    <section id="timeline">
+      <h2>2. Confirmed retirement timeline</h2>
+      <div class="cards">
+        <div class="card"><div class="num">Now</div><h3>No new builds</h3><p>Prompt Flow is no longer recommended for new development.</p></div>
+        <div class="card"><div class="num">Already</div><h3>Images frozen</h3><p>Prompt Flow runtime container images no longer receive security or package updates.</p></div>
+        <div class="card"><div class="num">20 Apr 2027</div><h3>Retirement</h3><p>Foundry/AML web authoring, VS Code extensions, and related runtime images become unsupported and unavailable.</p></div>
+      </div>
+      <div class="callout warning"><strong>Risk to note:</strong> “Still running today” does not mean “safe to leave unchanged.” Frozen runtime images create security and dependency risks before the final retirement date.</div>
+    </section>
+
+    <section id="existing">
+      <h2>3. What happens to existing flows?</h2>
+      <table>
+        <thead><tr><th>Question</th><th>Answer</th></tr></thead>
+        <tbody>
+          <tr><td>Will an existing flow stop immediately?</td><td><span class="tag partial">Not immediately</span> The retirement date is 20 April 2027. Use the remaining period for migration, but test current deployments and dependencies.</td></tr>
+          <tr><td>Will Microsoft automatically convert it?</td><td><span class="tag no">No announced auto-conversion</span> Official guidance describes an audit, manual rebuild, validation, operational migration, and cutover.</td></tr>
+          <tr><td>Can the old visual canvas remain after retirement?</td><td><span class="tag no">No</span> Microsoft states that the web authoring experience will no longer be supported or available after the date.</td></tr>
+          <tr><td>Will VS Code Prompt Flow tooling remain?</td><td><span class="tag no">No</span> Related VS Code extensions are included in the retirement statement.</td></tr>
+          <tr><td>What about Prompt Flow runtime images?</td><td><span class="tag no">Retiring</span> They already receive no security/package updates and become unavailable after retirement.</td></tr>
+          <tr><td>Does Microsoft promise that saved flow assets will be converted or retained?</td><td><span class="tag partial">Not stated</span> Do not assume conversion or post-retirement access. Export the flow definition, prompts, Python files, requirements, connections inventory, test data, and deployment configuration now.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout success"><strong>Safe treatment for production flows:</strong> Keep the original flow operating only during a controlled parallel-migration window. Build the replacement beside it, compare outputs, move traffic, monitor, and then decommission the original resources.</div>
+    </section>
+
+    <section id="alternative">
+      <h2>4. Recommended alternative: Microsoft Agent Framework</h2>
+      <p>Agent Framework replaces the visual, YAML-based Prompt Flow graph with a <strong>code-first Python or .NET workflow</strong>. It supports agents, tools, typed workflow steps, branches, fan-out/fan-in, multi-agent orchestration, and OpenTelemetry tracing.</p>
+      <div class="flow">
+        <div>Prompt Flow<br><span class="small">flow.dag.yaml + visual nodes</span></div><div class="arrow">→</div>
+        <div>Microsoft Agent Framework<br><span class="small">WorkflowBuilder + Executors</span></div><div class="arrow">→</div>
+        <div>Azure hosting<br><span class="small">Agent Service / Container Apps / Functions</span></div>
+      </div>
+      <div class="callout warning"><strong>Major learning change:</strong> Agent Framework does not provide a Prompt Flow-style visual graph editor. Teams that depend on drag-and-drop authoring must plan for code-based workflow development, source control, testing, and CI/CD.</div>
+    </section>
+
+    <section id="mapping">
+      <h2>5. Old-to-new concept mapping</h2>
+      <table>
+        <thead><tr><th>Prompt Flow</th><th>Agent Framework equivalent</th><th>Migration meaning</th></tr></thead>
+        <tbody>
+          <tr><td>Flow / visual YAML graph</td><td><code>WorkflowBuilder</code></td><td>Build the graph in code and connect executors with edges.</td></tr>
+          <tr><td>Any node</td><td><code>Executor</code> class + <code>@handler</code></td><td>One class or handler for each logical processing step.</td></tr>
+          <tr><td>LLM node</td><td><code>FoundryChatClient().as_agent()</code></td><td>Move model instructions into the agent definition.</td></tr>
+          <tr><td>Python node</td><td>Python inside an executor handler</td><td>No separate YAML registration is required.</td></tr>
+          <tr><td>Prompt node</td><td>String/template logic in a handler</td><td>Move prompt assembly into application code.</td></tr>
+          <tr><td>Conditional node</td><td><code>add_edge(..., condition=fn)</code></td><td>Represent route selection as a condition function.</td></tr>
+          <tr><td>Parallel nodes</td><td><code>add_fan_out_edges()</code></td><td>Send one message to several executors concurrently.</td></tr>
+          <tr><td>Merge / aggregation</td><td><code>add_fan_in_edges()</code></td><td>Wait for upstream executors and merge results.</td></tr>
+          <tr><td>Connections</td><td>Environment variables + managed identity/Key Vault</td><td>Inventory credentials; do not copy secrets into source code.</td></tr>
+          <tr><td>Evaluation flow</td><td>Azure AI Evaluation SDK evaluators</td><td>Use similarity, coherence, groundedness, and other evaluators.</td></tr>
+          <tr><td>Run history</td><td>OpenTelemetry tracing</td><td>Use Foundry tracing or Azure Monitor/Application Insights.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="migration">
+      <h2>6. Migration plan for an existing flow</h2>
+      <ol>
+        <li><strong>Inventory and export.</strong> Export <code>flow.dag.yaml</code>, prompt templates, Python tools, package versions, environment details, connection names, endpoints, test data, evaluation results, and traffic integrations.</li>
+        <li><strong>Map every node.</strong> Create a worksheet mapping each Prompt Flow node to an Agent Framework executor, agent, condition, fan-out, fan-in, or context provider. Account for all inputs and outputs.</li>
+        <li><strong>Rebuild a simple working path.</strong> Install <code>agent-framework</code> and <code>agent-framework-foundry</code>; implement the main linear route first, followed by branches and parallel paths.</li>
+        <li><strong>Use the correct client.</strong> For a Foundry project endpoint ending in <code>.services.ai.azure.com</code>, use <code>FoundryChatClient</code>. Do not use <code>AzureOpenAIChatClient</code> for that endpoint type.</li>
+        <li><strong>Validate side by side.</strong> Send the same representative inputs to old and new implementations. Microsoft’s guide proposes <code>SimilarityEvaluator</code> and a mean similarity target of at least <strong>3.5/5</strong> before continuing.</li>
+        <li><strong>Migrate operations.</strong> Add tracing, authentication, secrets management, error handling, scaling, alerts, evaluation gates, and CI/CD.</li>
+        <li><strong>Deploy the replacement.</strong> Choose Foundry Agent Service, Azure Container Apps, Azure Functions, or another appropriate container host.</li>
+        <li><strong>Cut over gradually.</strong> Move test traffic, then a controlled percentage of production traffic. Compare quality, latency, failures, and cost.</li>
+        <li><strong>Decommission only after stability.</strong> Once the new service is healthy and rollback is no longer needed, remove old endpoints, workspace connections, compute, and unused secrets.</li>
+      </ol>
+      <h3>Starter environment</h3>
+      <pre><code>python -m venv .venv
+.venv\Scripts\activate
+pip install agent-framework agent-framework-foundry python-dotenv azure-identity
+
+# .env (development only)
+FOUNDRY_PROJECT_ENDPOINT=https://&lt;resource&gt;.services.ai.azure.com
+FOUNDRY_MODEL=&lt;your-model-deployment-name&gt;</code></pre>
+      <p class="small">For production, prefer managed identity and Azure Key Vault rather than storing secrets in a local <code>.env</code> file.</p>
+    </section>
+
+    <section id="hosting">
+      <h2>7. Where can the replacement be deployed?</h2>
+      <table>
+        <thead><tr><th>Option</th><th>Best fit</th><th>Important note</th></tr></thead>
+        <tbody>
+          <tr><td>Foundry Agent Service</td><td>Managed agent hosting integrated with a Foundry project.</td><td>Microsoft’s Foundry migration page identifies this as a fully managed option.</td></tr>
+          <tr><td>Azure Container Apps</td><td>API-based workflow packaged as FastAPI; autoscaling and container control.</td><td>A practical replacement for many production Prompt Flow endpoints.</td></tr>
+          <tr><td>Azure Functions</td><td>Short, event-driven or HTTP-triggered execution.</td><td>Check timeout, state, and dependency requirements.</td></tr>
+          <tr><td>Other container host</td><td>Organizations with an established Kubernetes/container platform.</td><td>You own more deployment and operational responsibility.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout info"><strong>Azure ML special case:</strong> Microsoft says Prompt Flow deployments on Azure ML managed online endpoints do not have a direct Agent Framework equivalent. Package the Agent Framework workflow as an application (for example, FastAPI) and deploy it to Container Apps, Functions, or a supported container host.</div>
+    </section>
+
+    <section id="decision">
+      <h2>8. What should your team do now?</h2>
+      <table>
+        <thead><tr><th>Your situation</th><th>Recommended action</th></tr></thead>
+        <tbody>
+          <tr><td>Starting a new AI workflow</td><td>Do not start with Prompt Flow. Use Microsoft Agent Framework or another supported orchestration approach that fits the use case.</td></tr>
+          <tr><td>Existing proof of concept</td><td>Export the assets and rebuild soon. It is an ideal low-risk migration exercise.</td></tr>
+          <tr><td>Existing production flow</td><td>Start audit and parallel rebuild immediately; include security review because runtime images are frozen.</td></tr>
+          <tr><td>Training students</td><td>Explain Prompt Flow as a legacy visual concept, but conduct new practical labs with Agent Framework, Git, tests, tracing, and deployment.</td></tr>
+          <tr><td>Visual authoring is mandatory</td><td>Record this as a product-gap/requirement. Agent Framework is code-first and has no equivalent visual graph editor.</td></tr>
+        </tbody>
+      </table>
+      <h3>Minimum backup checklist</h3>
+      <ul class="checklist">
+        <li><code>flow.dag.yaml</code> and all source files</li><li>Prompt templates and variants</li><li>Requirements/package lock and runtime version</li><li>Connection inventory (names and targets—not plaintext secrets)</li><li>Environment variables and deployment settings</li><li>Representative input/output test set</li><li>Evaluation results and acceptance thresholds</li><li>Endpoint consumers, owners, SLAs, alerts, and rollback procedure</li>
+      </ul>
+    </section>
+
+    <section id="faq">
+      <h2>9. Frequently asked questions</h2>
+      <h3>Is Foundry Agent Service itself being stopped?</h3><p>No. The cited announcement concerns <strong>Prompt Flow</strong> in Microsoft Foundry and Azure Machine Learning, not the whole Foundry platform or Agent Service.</p>
+      <h3>Can I wait until April 2027?</h3><p>That is high risk. A migration includes code reconstruction, output-parity testing, security work, deployment, traffic cutover, and rollback time. Runtime images are already not receiving updates.</p>
+      <h3>Will my YAML import directly into Agent Framework?</h3><p>Microsoft’s documented process is to export and map the YAML, then rebuild with <code>WorkflowBuilder</code> and executors. Do not plan around automatic one-click conversion.</p>
+      <h3>Can I continue to use the open-source Prompt Flow project?</h3><p>The Microsoft-hosted Foundry/AML experience, related extensions, and container images are explicitly retiring. The referenced page notes that an open-source project exists, but that does not extend Microsoft’s stated support for the retiring hosted experiences. For enterprise planning, follow the supported migration path.</p>
+    </section>
+
+    <section id="sources">
+      <h2>10. Official Microsoft sources</h2>
+      <ul>
+        <li><a href="https://learn.microsoft.com/en-us/azure/foundry-classic/concepts/prompt-flow" target="_blank" rel="noopener">Prompt Flow in Microsoft Foundry portal (classic)—retirement warning</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/prompt-flow-migration-overview" target="_blank" rel="noopener">Migrate Prompt Flow to Microsoft Agent Framework in Foundry</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/machine-learning/prompt-flow/migrate-prompt-flow-to-agent-framework?view=azureml-api-2" target="_blank" rel="noopener">Azure Machine Learning migration guidance</a></li>
+        <li><a href="https://azure.microsoft.com/en-us/updates?id=502936" target="_blank" rel="noopener">Azure retirement update for Prompt Flow</a></li>
+      </ul>
+      <p class="small">This guide separates confirmed Microsoft statements from recommendations. Where Microsoft has not stated automatic conversion or post-retirement asset retention, the guide explicitly avoids assuming either.</p>
+    </section>
+  </main>
+</div>
+<footer>Prepared as a self-contained migration guide • Open in any modern browser or print to PDF</footer>
+</body>
+</html>

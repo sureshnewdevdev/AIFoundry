@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enabling State in Azure AI Foundry — Classroom Tutorial</title>
+<style>
+  :root{
+    --bg:#0f1420; --panel:#161d2e; --panel2:#1e2740; --ink:#e8edf7; --muted:#9fb0cc;
+    --brand:#4aa3ff; --brand2:#7c5cff; --ok:#37d399; --warn:#ffce54; --bad:#ff6b6b;
+    --line:#28324a; --code:#0b1020; --chip:#22304d; --shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  html[data-theme="light"]{
+    --bg:#f4f7fc; --panel:#ffffff; --panel2:#eef3fb; --ink:#12203a; --muted:#4a5a76;
+    --brand:#1f6fe0; --brand2:#6b4cff; --ok:#12a06a; --warn:#b8860b; --bad:#d63b3b;
+    --line:#d8e2f2; --code:#0b1020; --chip:#e3ecfb; --shadow:0 10px 30px rgba(30,60,120,.12);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.6;transition:background .3s,color .3s}
+  a{color:var(--brand)}
+  header{position:sticky;top:0;z-index:50;background:linear-gradient(90deg,var(--brand),var(--brand2));
+    color:#fff;padding:14px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:var(--shadow)}
+  header h1{font-size:1.1rem;margin:0;flex:1;min-width:220px}
+  header .badge{background:rgba(255,255,255,.18);padding:3px 10px;border-radius:20px;font-size:.72rem;letter-spacing:.3px}
+  .btn{cursor:pointer;border:none;border-radius:10px;padding:8px 14px;font-size:.85rem;font-weight:600;
+    background:rgba(255,255,255,.16);color:#fff;transition:.2s}
+  .btn:hover{background:rgba(255,255,255,.3)}
+  .wrap{max-width:1080px;margin:0 auto;padding:26px 18px 90px}
+  .layout{display:grid;grid-template-columns:230px 1fr;gap:26px}
+  @media(max-width:860px){.layout{grid-template-columns:1fr}nav.toc{position:static!important;max-height:none!important}}
+  nav.toc{position:sticky;top:74px;align-self:start;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;padding:14px;max-height:calc(100vh - 96px);overflow:auto}
+  nav.toc h4{margin:.2rem 0 .6rem;font-size:.78rem;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  nav.toc a{display:block;padding:6px 8px;border-radius:8px;color:var(--ink);text-decoration:none;font-size:.86rem}
+  nav.toc a:hover{background:var(--panel2)}
+  nav.toc a.done::after{content:" ✓";color:var(--ok)}
+  section{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-bottom:22px;box-shadow:var(--shadow)}
+  section h2{margin-top:0;font-size:1.35rem;display:flex;align-items:center;gap:10px}
+  section h3{margin:1.4rem 0 .5rem;font-size:1.05rem;color:var(--brand)}
+  .num{background:var(--brand);color:#fff;width:30px;height:30px;border-radius:9px;display:inline-flex;
+    align-items:center;justify-content:center;font-size:.9rem;font-weight:700;flex:0 0 auto}
+  .lead{color:var(--muted);font-size:.98rem}
+  .chip{display:inline-block;background:var(--chip);color:var(--ink);padding:3px 10px;border-radius:20px;
+    font-size:.74rem;margin:2px 4px 2px 0;border:1px solid var(--line)}
+  .callout{border-left:4px solid var(--brand);background:var(--panel2);padding:12px 16px;border-radius:0 12px 12px 0;margin:14px 0}
+  .callout.warn{border-color:var(--warn)} .callout.ok{border-color:var(--ok)} .callout.bad{border-color:var(--bad)}
+  .callout b{color:var(--ink)}
+  pre{background:var(--code);color:#e6edf3;border-radius:12px;padding:14px 16px;overflow:auto;font-size:.82rem;
+    border:1px solid #1b2440;position:relative;margin:12px 0}
+  pre code{font-family:'Cascadia Code',Consolas,'Courier New',monospace}
+  .copy{position:absolute;top:8px;right:8px;background:#22304d;color:#cfe0ff;border:none;border-radius:8px;
+    padding:4px 10px;font-size:.72rem;cursor:pointer}
+  .copy:hover{background:#2f4370}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.88rem}
+  th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+  th{background:var(--panel2)}
+  .kw{color:#79c0ff}.st{color:#7ee787}.cm{color:#8b98a9;font-style:italic}
+  /* quiz */
+  .q{margin:14px 0;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}
+  .q p.stem{font-weight:600;margin:.2rem 0 .7rem}
+  .opt{display:block;padding:9px 12px;border:1px solid var(--line);border-radius:9px;margin:6px 0;cursor:pointer;background:var(--panel);transition:.15s}
+  .opt:hover{border-color:var(--brand)}
+  .opt.correct{border-color:var(--ok);background:rgba(55,211,153,.12)}
+  .opt.wrong{border-color:var(--bad);background:rgba(255,107,107,.12)}
+  .opt.disabled{pointer-events:none;opacity:.9}
+  .explain{margin-top:8px;font-size:.85rem;color:var(--muted);display:none}
+  .explain.show{display:block}
+  /* exam */
+  #examTimer{font-weight:700;font-size:1.1rem}
+  .exam-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  #examResult{font-weight:700;margin-top:10px}
+  /* notes */
+  textarea{width:100%;min-height:120px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);
+    color:var(--ink);padding:12px;font-family:inherit;font-size:.9rem;resize:vertical}
+  .accordion{border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden}
+  .accordion>button{width:100%;text-align:left;background:var(--panel2);border:none;color:var(--ink);
+    padding:12px 16px;font-weight:600;cursor:pointer;font-size:.95rem;display:flex;justify-content:space-between}
+  .accordion .body{padding:0 16px;max-height:0;overflow:hidden;transition:max-height .3s,padding .3s}
+  .accordion.open .body{padding:14px 16px;max-height:900px}
+  .progress-wrap{background:var(--panel2);border-radius:20px;height:12px;overflow:hidden;margin:8px 0}
+  .progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--ok));transition:width .3s}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr}}
+  .diagram{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto}
+  footer{text-align:center;color:var(--muted);font-size:.82rem;padding:20px}
+  .pill{font-size:.7rem;padding:2px 8px;border-radius:12px;border:1px solid var(--line)}
+  .pill.prev{color:var(--warn);border-color:var(--warn)}
+</style>
+</head>
+<body>
+<header>
+  <span style="font-size:1.4rem">🧠</span>
+  <h1>Enabling <u>State</u> in Azure AI Foundry</h1>
+  <span class="badge">Classroom Tutorial</span>
+  <button class="btn" id="themeBtn">☀️ Light</button>
+  <button class="btn" id="resetBtn" title="Clear saved notes & progress">↺ Reset</button>
+</header>
+
+<div class="wrap">
+
+  <div class="callout warn" style="margin-bottom:20px">
+    <b>Trainer note:</b> The <code>tutorial-prompt-v6.txt</code> master prompt wasn't attached in this session (uploads reset between chats), so this file was generated from our established v6 pattern rather than strict-compliance mode. Re-upload the prompt if you want a byte-for-byte v6 regeneration. Technical content is sourced from Microsoft Foundry docs (current as of Aug 2026). Memory features marked <span class="pill prev">preview</span> may change.
+  </div>
+
+  <div class="layout">
+    <!-- TOC -->
+    <nav class="toc" id="toc">
+      <h4>Contents</h4>
+      <div id="progressMini" style="font-size:.75rem;color:var(--muted);margin-bottom:8px"></div>
+      <div class="progress-wrap"><div class="progress-bar" id="tocBar"></div></div>
+      <a href="#objectives">0 · Objectives</a>
+      <a href="#model">1 · The mental model</a>
+      <a href="#graph">2 · Architecture graph</a>
+      <a href="#layer1">3 · Session state (threads)</a>
+      <a href="#layer2">4 · Persisting threads</a>
+      <a href="#layer3">5 · Long-term memory</a>
+      <a href="#portal">6 · Portal walkthrough</a>
+      <a href="#demo">7 · End-to-end demo</a>
+      <a href="#decide">8 · Which layer?</a>
+      <a href="#quiz">9 · Quiz</a>
+      <a href="#exam">10 · Timed exam</a>
+      <a href="#interview">11 · Interview Q&amp;A</a>
+      <a href="#notes">12 · My notes</a>
+    </nav>
+
+    <!-- CONTENT -->
+    <main>
+
+    <!-- 0 -->
+    <section id="objectives">
+      <h2><span class="num">0</span> Learning objectives</h2>
+      <p class="lead">In Foundry, "state" isn't one switch — it's <b>three layers</b> that you enable independently. By the end you will be able to:</p>
+      <ul>
+        <li>Explain the difference between <b>session state</b>, <b>persisted thread storage</b>, and <b>long-term memory</b>.</li>
+        <li>Confirm that a thread already keeps conversation history automatically — and know when that isn't enough.</li>
+        <li>Choose <b>Basic</b> vs <b>Standard</b> setup, and store threads in your own <b>Cosmos DB</b> (Bring-Your-Own storage).</li>
+        <li>Enable the <b>Memory Store</b> (preview) so an agent remembers a user <i>across separate conversations</i>.</li>
+        <li>Wire it end-to-end with the Python SDK and reason about <b>scope</b>, <b>TTL</b>, and privacy.</li>
+      </ul>
+      <div>
+        <span class="chip">Foundry Agent Service</span><span class="chip">Threads / Runs / Messages</span>
+        <span class="chip">Cosmos DB</span><span class="chip">Memory Store</span><span class="chip">Python SDK</span><span class="chip">RBAC</span>
+      </div>
+    </section>
+
+    <!-- 1 -->
+    <section id="model">
+      <h2><span class="num">1</span> The mental model: three layers of state</h2>
+      <p class="lead">A raw chat-completions call is <b>stateless</b> — the model sees only what you send and forgets everything after. Foundry adds state in three progressively more durable layers. Enable only what you need.</p>
+      <table>
+        <tr><th>Layer</th><th>What it remembers</th><th>Lifetime</th><th>Enable by…</th></tr>
+        <tr><td><b>① Session state</b><br>(threads, runs, messages)</td><td>The current conversation — every message, tool call, and result</td><td>Until the thread is explicitly deleted</td><td>Doing nothing extra — it's on by default when you use a thread</td></tr>
+        <tr><td><b>② Persisted thread storage</b></td><td>Where those threads physically live</td><td>Managed by you (Standard) or Microsoft (Basic)</td><td>Choosing Standard setup / Bring-Your-Own Cosmos DB</td></tr>
+        <tr><td><b>③ Long-term memory</b> <span class="pill prev">preview</span></td><td>Durable, per-user facts distilled from many conversations</td><td>Until it expires (TTL) or you delete it</td><td>Creating a Memory Store + attaching the memory tool</td></tr>
+      </table>
+      <div class="callout"><b>Key idea:</b> "Enabling state" almost always means <i>moving up a layer</i> — from an automatic thread, to threads in your own database, to a semantic memory that survives across conversations.</div>
+    </section>
+
+    <!-- 2 GRAPH -->
+    <section id="graph">
+      <h2><span class="num">2</span> Architecture graph</h2>
+      <p class="lead">How a single user turn flows through the three layers. Ephemeral session context stays in the thread; distilled facts get promoted into the Memory Store, partitioned by <code>scope</code>.</p>
+      <div class="diagram">
+      <svg viewBox="0 0 940 520" width="100%" role="img" aria-label="Foundry state architecture diagram">
+        <defs>
+          <marker id="arw" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#4aa3ff"/>
+          </marker>
+          <marker id="arw2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#7c5cff"/>
+          </marker>
+          <marker id="arwg" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#37d399"/>
+          </marker>
+          <style>
+            .box{fill:#1e2740;stroke:#28324a;stroke-width:1.5;rx:12}
+            .lbl{fill:#e8edf7;font:600 14px 'Segoe UI',sans-serif}
+            .sub{fill:#9fb0cc;font:11px 'Segoe UI',sans-serif}
+            .tag{fill:#4aa3ff;font:700 11px 'Segoe UI',sans-serif}
+            .flow{stroke:#4aa3ff;stroke-width:2;fill:none}
+            .flow2{stroke:#7c5cff;stroke-width:2;fill:none;stroke-dasharray:6 4}
+            .flowg{stroke:#37d399;stroke-width:2;fill:none}
+            .band{fill:#161d2e;stroke:#28324a;stroke-width:1;rx:14}
+          </style>
+        </defs>
+
+        <!-- User -->
+        <rect x="30" y="220" width="120" height="70" rx="12" class="box"/>
+        <text x="90" y="250" text-anchor="middle" class="lbl">👤 End user</text>
+        <text x="90" y="270" text-anchor="middle" class="sub">sends a message</text>
+
+        <!-- Agent runtime -->
+        <rect x="210" y="180" width="180" height="150" rx="12" class="box" fill="#22304d"/>
+        <text x="300" y="208" text-anchor="middle" class="lbl">🤖 Foundry Agent</text>
+        <text x="300" y="228" text-anchor="middle" class="sub">Responses API</text>
+        <text x="300" y="248" text-anchor="middle" class="sub">reasoning + tools</text>
+        <text x="300" y="272" text-anchor="middle" class="tag">LAYER ①</text>
+        <text x="300" y="292" text-anchor="middle" class="sub">run over the thread</text>
+
+        <!-- Thread band -->
+        <rect x="450" y="30" width="460" height="180" class="band"/>
+        <text x="470" y="55" class="tag">LAYER ② — PERSISTED THREADS</text>
+        <rect x="470" y="70" width="180" height="110" rx="12" class="box"/>
+        <text x="560" y="98" text-anchor="middle" class="lbl">🧵 Thread</text>
+        <text x="560" y="118" text-anchor="middle" class="sub">messages · runs</text>
+        <text x="560" y="136" text-anchor="middle" class="sub">tool results</text>
+        <text x="560" y="160" text-anchor="middle" class="sub">auto history</text>
+        <rect x="680" y="70" width="200" height="110" rx="12" class="box" fill="#22304d"/>
+        <text x="780" y="98" text-anchor="middle" class="lbl">🗄️ Cosmos DB</text>
+        <text x="780" y="118" text-anchor="middle" class="sub">Standard setup =</text>
+        <text x="780" y="136" text-anchor="middle" class="sub">your subscription</text>
+        <text x="780" y="160" text-anchor="middle" class="sub">(Basic = MS-managed)</text>
+
+        <!-- Memory band -->
+        <rect x="450" y="300" width="460" height="190" class="band"/>
+        <text x="470" y="325" class="tag" fill="#37d399">LAYER ③ — LONG-TERM MEMORY (preview)</text>
+        <rect x="470" y="340" width="180" height="120" rx="12" class="box"/>
+        <text x="560" y="368" text-anchor="middle" class="lbl">🔎 memory_search</text>
+        <text x="560" y="386" text-anchor="middle" class="sub">_preview tool</text>
+        <text x="560" y="408" text-anchor="middle" class="sub">extract · consolidate</text>
+        <text x="560" y="430" text-anchor="middle" class="sub">update_delay ⏱</text>
+        <rect x="680" y="340" width="200" height="120" rx="12" class="box" fill="#22304d"/>
+        <text x="780" y="368" text-anchor="middle" class="lbl">🧠 Memory Store</text>
+        <text x="780" y="388" text-anchor="middle" class="sub">scope = user_123</text>
+        <text x="780" y="408" text-anchor="middle" class="sub">user_profile · summary</text>
+        <text x="780" y="430" text-anchor="middle" class="sub">TTL retention</text>
+
+        <!-- flows -->
+        <path class="flow" d="M150,255 L205,255" marker-end="url(#arw)"/>
+        <path class="flow" d="M390,230 C420,180 430,140 465,125" marker-end="url(#arw)"/>
+        <path class="flow" d="M650,125 L675,125" marker-end="url(#arw)"/>
+        <text x="655" y="118" class="sub">persist</text>
+        <path class="flow2" d="M390,290 C420,340 430,380 465,395" marker-end="url(#arw2)"/>
+        <text x="405" y="360" class="sub">promote facts</text>
+        <path class="flowg" d="M650,400 L675,400" marker-end="url(#arwg)"/>
+        <text x="655" y="393" class="sub">store</text>
+        <path class="flowg" d="M680,430 C560,470 420,440 392,320" marker-end="url(#arwg)"/>
+        <text x="500" y="483" class="sub" fill="#37d399">recall on next conversation →</text>
+      </svg>
+      </div>
+      <div class="callout ok"><b>Read the graph as a promotion pipeline:</b> a message enters the <b>thread</b> (①), the thread is <b>persisted</b> to Cosmos (②), and only the durable, distilled facts get <b>promoted</b> into the Memory Store (③) so a <i>brand-new</i> conversation can recall them.</div>
+    </section>
+
+    <!-- 3 -->
+    <section id="layer1">
+      <h2><span class="num">3</span> Layer ① — Session state (it's already on)</h2>
+      <p class="lead">Foundry Agent Service supports <b>persistent threads, runs, and messages</b>. When you create a thread and append messages, the conversation history is maintained and truncated automatically to fit the model's context window — you don't hand-manage it.</p>
+      <h3>The lifecycle</h3>
+      <ol>
+        <li><b>Create an agent</b> — the reasoning entity with instructions and tools.</li>
+        <li><b>Create a thread</b> — one per conversation; append messages as the user replies.</li>
+        <li><b>Send messages</b> — from the user and the agent (text, images, files).</li>
+        <li><b>Run the agent</b> — it processes the thread and appends its response.</li>
+        <li><b>Monitor + get response</b> — poll the run to completion, then read the reply.</li>
+      </ol>
+      <pre><button class="copy">Copy</button><code><span class="cm"># pip install azure-ai-projects azure-identity</span>
+<span class="kw">import</span> os
+<span class="kw">from</span> azure.ai.projects <span class="kw">import</span> AIProjectClient
+<span class="kw">from</span> azure.identity <span class="kw">import</span> DefaultAzureCredential
+
+project = AIProjectClient(
+    endpoint=os.environ[<span class="st">"FOUNDRY_PROJECT_ENDPOINT"</span>],  <span class="cm"># https://&lt;acct&gt;.services.ai.azure.com/api/projects/&lt;proj&gt;</span>
+    credential=DefaultAzureCredential(),
+)
+
+<span class="cm"># A thread IS your session state — history is kept automatically</span>
+thread = project.agents.threads.create()
+project.agents.messages.create(thread_id=thread.id, role=<span class="st">"user"</span>,
+                               content=<span class="st">"Reconcile settlement batch #4471."</span>)
+
+run = project.agents.runs.create_and_process(thread_id=thread.id, agent_id=agent.id)
+<span class="cm"># The thread now holds the full turn-by-turn history until you delete it.</span></code></pre>
+      <div class="callout"><b>Two truths to remember:</b> (1) history is automatic <i>within</i> a thread; (2) a <i>new</i> thread starts blank — sessions are stateless relative to each other. Cross-conversation recall is Layer ③, not Layer ①.</div>
+    </section>
+
+    <!-- 4 -->
+    <section id="layer2">
+      <h2><span class="num">4</span> Layer ② — Persisting threads (Basic vs Standard)</h2>
+      <p class="lead">Threads persist until explicitly deleted — but <i>where</i> they live depends on how your project's Agent Service is set up.</p>
+      <div class="grid2">
+        <div class="callout"><b>Basic setup</b><br>Threads, messages, runs, and files are stored in a secure, <b>Microsoft-managed</b> storage account, logically isolated for your project. Zero infrastructure to run. Least control.</div>
+        <div class="callout ok"><b>Standard setup</b><br>Data is stored in <b>your own Azure resources</b> — conversation state in <b>Azure Cosmos DB</b>, plus Azure AI Search and Storage. Full ownership, custom retention, encryption, and governance.</div>
+      </div>
+      <h3>Bring-Your-Own (BYO) thread storage</h3>
+      <p>The Standard path lets you point thread storage at your own database (Cosmos DB, SQL, Blob, or a vector DB). Pair it with geo-replicated Cosmos DB and Foundry can fail over to a secondary region so threads stay available during an outage.</p>
+      <table>
+        <tr><th>You want…</th><th>Setup</th><th>Why</th></tr>
+        <tr><td>A quick demo / POC</td><td>Basic</td><td>Nothing to provision; MS-managed</td></tr>
+        <tr><td>Compliance, data residency, CMK</td><td>Standard (BYO)</td><td>Data sits in resources you own and audit</td></tr>
+        <tr><td>Custom retention / encryption policies</td><td>Standard (BYO)</td><td>You apply your own governance frameworks</td></tr>
+        <tr><td>Regional resilience</td><td>Standard + geo-replicated Cosmos</td><td>Auto failover keeps threads reachable</td></tr>
+      </table>
+      <div class="callout warn"><b>Deletion is explicit.</b> All stateful data persists until you call the delete function with the thread ID. Clearing a run in the Playground does <i>not</i> delete the thread. Plan a retention strategy from day one.</div>
+      <pre><button class="copy">Copy</button><code><span class="cm"># Housekeeping: threads don't expire on their own</span>
+project.agents.threads.delete(thread_id=thread.id)</code></pre>
+    </section>
+
+    <!-- 5 -->
+    <section id="layer3">
+      <h2><span class="num">5</span> Layer ③ — Long-term memory <span class="pill prev">preview</span></h2>
+      <p class="lead">Memory in Foundry Agent Service is a <b>managed, long-term</b> memory solution. It gives an agent continuity across <i>separate</i> sessions, devices, and workflows — retaining user preferences, distilled history, and personalization.</p>
+      <h3>Core concepts</h3>
+      <table>
+        <tr><th>Concept</th><th>Meaning</th></tr>
+        <tr><td><b>Memory store</b></td><td>Persistent container; defines which info is relevant and how it's processed. Create one <i>per agent</i>.</td></tr>
+        <tr><td><b>scope</b></td><td>Partition key that isolates memories per user/team. Use <code>{{$userId}}</code> with the memory tool for automatic per-user isolation.</td></tr>
+        <tr><td><b>memory_search_preview tool</b></td><td>Attached to a prompt agent so it can read/write memories during a conversation.</td></tr>
+        <tr><td><b>update_delay</b></td><td>Debounce window (seconds) of inactivity before writes commit. Default ≈ 300s (5 min).</td></tr>
+        <tr><td><b>default_ttl_seconds</b></td><td>Retention. <code>0</code> = never expires. Set to match compliance needs.</td></tr>
+        <tr><td>Memory types</td><td><code>user_profile</code>, <code>chat_summary</code>, and (latest preview) <code>procedural</code> memory.</td></tr>
+      </table>
+      <h3>Step 1 — Prerequisites</h3>
+      <ul>
+        <li>A Foundry project + a <b>chat model</b> deployment (e.g. <code>gpt-5.2</code>) and an <b>embedding model</b> (e.g. <code>text-embedding-3-small</code>).</li>
+        <li>RBAC: enable a <b>system-assigned managed identity</b> on the project, then assign the <b>Foundry User</b> role (formerly "Azure AI User").</li>
+      </ul>
+      <pre><button class="copy">Copy</button><code>pip install <span class="st">"azure-ai-projects>=2.3.0"</span> azure-identity</code></pre>
+      <h3>Step 2 — Create the memory store</h3>
+      <pre><button class="copy">Copy</button><code><span class="kw">from</span> azure.ai.projects.models <span class="kw">import</span> (
+    MemoryStoreDefaultDefinition, MemoryStoreDefaultOptions)
+
+options = MemoryStoreDefaultOptions(
+    chat_summary_enabled=<span class="kw">True</span>,
+    user_profile_enabled=<span class="kw">True</span>,
+    procedural_memory_enabled=<span class="kw">True</span>,
+    default_ttl_seconds=<span class="st">30</span>*<span class="st">24</span>*<span class="st">60</span>*<span class="st">60</span>,   <span class="cm"># 30-day retention; 0 = never</span>
+    user_profile_details=<span class="st">"Avoid sensitive data: age, financials, precise location, credentials"</span>,
+)
+
+definition = MemoryStoreDefaultDefinition(
+    chat_model=os.environ[<span class="st">"MEMORY_STORE_CHAT_MODEL_DEPLOYMENT_NAME"</span>],
+    embedding_model=os.environ[<span class="st">"MEMORY_STORE_EMBEDDING_MODEL_DEPLOYMENT_NAME"</span>],
+    options=options,
+)
+
+store = project.beta.memory_stores.create(
+    name=<span class="st">"my_memory_store"</span>,
+    definition=definition,
+    description=<span class="st">"Procedural memory + 30-day TTL"</span>,
+)</code></pre>
+      <h3>Step 3 — Attach the memory tool to an agent</h3>
+      <pre><button class="copy">Copy</button><code><span class="kw">from</span> azure.ai.projects.models <span class="kw">import</span> (
+    MemorySearchPreviewTool, PromptAgentDefinition)
+
+tool = MemorySearchPreviewTool(
+    memory_store_name=<span class="st">"my_memory_store"</span>,
+    scope=<span class="st">"{{$userId}}"</span>,     <span class="cm"># per-user isolation, resolved from x-memory-user-id header</span>
+    update_delay=<span class="st">300</span>,          <span class="cm"># commit after 5 min of inactivity</span>
+)
+
+agent = project.agents.create_version(
+    agent_name=<span class="st">"MyAgent"</span>,
+    definition=PromptAgentDefinition(
+        model=os.environ[<span class="st">"MEMORY_STORE_CHAT_MODEL_DEPLOYMENT_NAME"</span>],
+        instructions=<span class="st">"You are a helpful assistant."</span>,
+        tools=[tool],
+    ),
+)</code></pre>
+      <div class="callout"><b>How scope resolves:</b> with <code>{{$userId}}</code>, Foundry reads the <code>x-memory-user-id</code> request header if present (proxy/backend scenarios); otherwise it falls back to the caller's Microsoft Entra token (<code>tid_oid</code>). No hard-coded IDs.</div>
+    </section>
+
+    <!-- 6 -->
+    <section id="portal">
+      <h2><span class="num">6</span> Portal walkthrough — enable RBAC for memory</h2>
+      <p class="lead">Do this once so the project can call the Memory Store API.</p>
+      <ol>
+        <li>Azure portal → your <b>project</b> → <b>Resource Management ▸ Identity</b> → toggle on the <b>system-assigned managed identity</b>.</li>
+        <li>Go to the resource that contains your project → <b>Access control (IAM)</b>.</li>
+        <li><b>Add ▸ Add role assignment</b>.</li>
+        <li>Assign <b>Foundry User</b> to the project's managed identity, then <b>Review + assign</b>.</li>
+      </ol>
+      <div class="callout warn"><b>Role rename:</b> Foundry User / Owner / Account Owner / Project Manager were previously <i>Azure AI</i> User / Owner / … . Role IDs and permissions are unchanged — you may still see old names mid-rollout.</div>
+      <div class="callout"><b>No RBAC?</b> For dev only, you can fall back to key-based auth, but role-based access is recommended for anything production.</div>
+    </section>
+
+    <!-- 7 -->
+    <section id="demo">
+      <h2><span class="num">7</span> End-to-end: prove cross-session recall</h2>
+      <p class="lead">The payoff — the agent remembers a preference stated in one conversation and uses it in a <b>different</b> one.</p>
+      <pre><button class="copy">Copy</button><code>oai = project.get_openai_client()
+
+<span class="cm"># --- Conversation A: user states a preference ---</span>
+convA = oai.conversations.create()
+oai.responses.create(
+    input=<span class="st">"I prefer dark roast coffee"</span>,
+    conversation=convA.id,
+    extra_body={<span class="st">"agent_reference"</span>: {<span class="st">"name"</span>: agent.name, <span class="st">"type"</span>: <span class="st">"agent_reference"</span>}},
+    <span class="cm"># extra_headers={"x-memory-user-id": "user_123"},  # scope to a user</span>
+)
+
+<span class="cm"># Memories commit after update_delay of inactivity</span>
+<span class="kw">import</span> time; time.sleep(<span class="st">65</span>)
+
+<span class="cm"># --- Conversation B: brand-new thread, no context passed ---</span>
+convB = oai.conversations.create()
+r = oai.responses.create(
+    input=<span class="st">"Please order my usual coffee"</span>,
+    conversation=convB.id,
+    extra_body={<span class="st">"agent_reference"</span>: {<span class="st">"name"</span>: agent.name, <span class="st">"type"</span>: <span class="st">"agent_reference"</span>}},
+)
+<span class="kw">print</span>(r.output_text)   <span class="cm"># → references dark roast, recalled from memory</span></code></pre>
+      <h3>Direct "remember / forget" commands</h3>
+      <p>When a user explicitly says <i>remember</i> or <i>forget</i>, the memory tool applies it immediately and returns <code>memory_command_call</code> items in the output — no extra configuration needed. (TTL still applies; a remembered item can still expire.)</p>
+      <div class="callout ok"><b>Static vs contextual recall:</b> inject <b>static</b> user-profile memories at the <i>start</i> of every conversation (call <code>search_memories</code> with a scope but no items); fetch <b>contextual</b> memories per turn by passing the latest messages.</div>
+    </section>
+
+    <!-- 8 -->
+    <section id="decide">
+      <h2><span class="num">8</span> Decision guide — which layer do I actually need?</h2>
+      <table>
+        <tr><th>If your requirement is…</th><th>Enable</th></tr>
+        <tr><td>"The bot should remember what we said earlier in <i>this</i> chat."</td><td>① Just use a thread (already on)</td></tr>
+        <tr><td>"Threads must live in <i>our</i> database for compliance/CMK."</td><td>② Standard setup / BYO Cosmos DB</td></tr>
+        <tr><td>"Survive outages across regions."</td><td>② Standard + geo-replicated Cosmos</td></tr>
+        <tr><td>"Remember a user's preferences across <i>separate</i> conversations & devices."</td><td>③ Memory Store + memory tool</td></tr>
+        <tr><td>"Per-user isolation with automatic identity."</td><td>③ scope = <code>{{$userId}}</code></td></tr>
+        <tr><td>"Long-running business process over days/weeks."</td><td>Hosted agents' per-project sandbox ($HOME) or a durable-task extension</td></tr>
+      </table>
+      <div class="callout"><b>Don't over-build.</b> Most chat scenarios need only Layer ①. Add ② for governance, ③ only when you need memory that outlives a conversation.</div>
+    </section>
+
+    <!-- 9 QUIZ -->
+    <section id="quiz">
+      <h2><span class="num">9</span> Knowledge check</h2>
+      <p class="lead">Pick an answer to reveal the explanation. Answered questions count toward your progress.</p>
+      <div id="quizHost"></div>
+      <div id="quizScore" style="font-weight:700;margin-top:8px"></div>
+    </section>
+
+    <!-- 10 EXAM -->
+    <section id="exam">
+      <h2><span class="num">10</span> Timed exam <span style="font-size:.8rem;color:var(--muted)">(6 questions · 4 min)</span></h2>
+      <div class="exam-controls">
+        <button class="btn" id="startExam" style="background:var(--brand)">▶ Start exam</button>
+        <span id="examTimer">04:00</span>
+        <button class="btn" id="submitExam" style="background:var(--ok);display:none">Submit</button>
+      </div>
+      <div id="examHost" style="opacity:.4;pointer-events:none"></div>
+      <div id="examResult"></div>
+    </section>
+
+    <!-- 11 INTERVIEW -->
+    <section id="interview">
+      <h2><span class="num">11</span> Interview Q&amp;A</h2>
+      <p class="lead">Click to expand. Common questions when a role touches Foundry agent state.</p>
+      <div id="iaHost"></div>
+    </section>
+
+    <!-- 12 NOTES -->
+    <section id="notes">
+      <h2><span class="num">12</span> My notes</h2>
+      <p class="lead">Saved to this browser only (localStorage). Survives refresh; cleared by the Reset button.</p>
+      <textarea id="noteArea" placeholder="Jot down commands, gotchas, questions for the trainer…"></textarea>
+      <div style="margin-top:8px;font-size:.8rem;color:var(--muted)" id="noteStatus"></div>
+    </section>
+
+    </main>
+  </div>
+</div>
+
+<footer>Foundry State Tutorial · generated from the v6 classroom pattern · technical content per Microsoft Foundry docs (Aug 2026) · preview features subject to change.</footer>
+
+<script>
+/* ---------- THEME ---------- */
+const root=document.documentElement, themeBtn=document.getElementById('themeBtn');
+function applyTheme(t){root.setAttribute('data-theme',t);themeBtn.textContent=t==='dark'?'☀️ Light':'🌙 Dark';localStorage.setItem('fs_theme',t);}
+applyTheme(localStorage.getItem('fs_theme')||'dark');
+themeBtn.onclick=()=>applyTheme(root.getAttribute('data-theme')==='dark'?'light':'dark');
+
+/* ---------- COPY BUTTONS ---------- */
+document.querySelectorAll('.copy').forEach(b=>{b.onclick=()=>{const code=b.parentElement.innerText.replace(/^Copy\n/,'');navigator.clipboard.writeText(code);b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1200);};});
+
+/* ---------- NOTES ---------- */
+const note=document.getElementById('noteArea'),ns=document.getElementById('noteStatus');
+note.value=localStorage.getItem('fs_notes')||'';
+let nt;note.addEventListener('input',()=>{localStorage.setItem('fs_notes',note.value);clearTimeout(nt);ns.textContent='Saving…';nt=setTimeout(()=>ns.textContent='✓ Saved',400);});
+
+/* ---------- QUIZ DATA ---------- */
+const quiz=[
+ {q:"Within a single Foundry thread, who manages the conversation history?",
+  o:["You must serialize it to a DB yourself","Foundry maintains and truncates it automatically","It is discarded after each run","Only the embedding model keeps it"],a:1,
+  e:"A thread keeps turn-by-turn history automatically and truncates to fit the context window — that's Layer ① session state."},
+ {q:"In the Standard setup, where does conversation (thread) state get stored?",
+  o:["A Microsoft-managed account only","Your own Azure Cosmos DB","The model's weights","Browser localStorage"],a:1,
+  e:"Standard setup stores threads in your own resources — Cosmos DB for conversation state — giving you ownership and governance."},
+ {q:"What does a brand-new thread know about a previous thread's conversation?",
+  o:["Everything, automatically","Nothing — sessions are stateless relative to each other","Only the last message","Only tool results"],a:1,
+  e:"History is automatic WITHIN a thread but a new thread starts blank. Cross-conversation recall requires Layer ③ memory."},
+ {q:"Which piece isolates memories per user without hard-coding IDs?",
+  o:["update_delay","default_ttl_seconds","scope set to {{$userId}}","chat_summary_enabled"],a:2,
+  e:"scope = {{$userId}} resolves identity from the x-memory-user-id header, or falls back to the Entra token (tid_oid)."},
+ {q:"A default_ttl_seconds value of 0 means…",
+  o:["Delete immediately","Never expires","5-minute retention","Invalid — must be positive"],a:1,
+  e:"0 = no expiration. Otherwise TTL sets how long memories are retained before automatic removal."},
+ {q:"Clearing a run in the Playground does what to the thread?",
+  o:["Deletes the thread and its data","Nothing — the thread persists until you delete it explicitly","Rotates the encryption key","Exports it to Blob"],a:1,
+  e:"Stateful data persists until explicitly deleted with the thread ID. Playground 'clear run' does not delete threads."},
+ {q:"Which RBAC role does the project's managed identity need for the Memory Store API?",
+  o:["Owner of the subscription","Foundry User (formerly Azure AI User)","Storage Blob Data Reader","Cosmos DB Account Reader"],a:1,
+  e:"Assign Foundry User to the project's system-assigned managed identity; the role was recently renamed from Azure AI User."}
+];
+const qh=document.getElementById('quizHost');let qAnswered=0,qCorrect=0;
+quiz.forEach((item,i)=>{
+  const d=document.createElement('div');d.className='q';
+  d.innerHTML=`<p class="stem">${i+1}. ${item.q}</p>`;
+  item.o.forEach((op,j)=>{
+    const el=document.createElement('div');el.className='opt';el.textContent=op;
+    el.onclick=()=>{
+      d.querySelectorAll('.opt').forEach(x=>x.classList.add('disabled'));
+      if(j===item.a){el.classList.add('correct');qCorrect++;}
+      else{el.classList.add('wrong');d.querySelectorAll('.opt')[item.a].classList.add('correct');}
+      d.querySelector('.explain').classList.add('show');
+      qAnswered++;updateQuizScore();markDone('#quiz');saveProgress();
+    };
+    d.appendChild(el);
+  });
+  const ex=document.createElement('div');ex.className='explain';ex.textContent='💡 '+item.e;d.appendChild(ex);
+  qh.appendChild(d);
+});
+function updateQuizScore(){document.getElementById('quizScore').textContent=`Score: ${qCorrect}/${qAnswered} answered (of ${quiz.length})`;}
+
+/* ---------- EXAM ---------- */
+const exam=[
+ {q:"Name the three layers of state in the order you'd typically adopt them.",o:["Memory → Threads → Sessions","Session (thread) → Persisted storage → Long-term memory","Cosmos → Entra → TTL","Embeddings → Runs → Scope"],a:1},
+ {q:"You need CMK and data residency for stored threads. Choose:",o:["Basic setup","Standard setup / BYO Cosmos DB","Disable threads","Use localStorage"],a:1},
+ {q:"The memory write doesn't appear right after a turn. Most likely cause:",o:["Wrong model","update_delay debounce still pending","TTL is 0","No embedding model"],a:1},
+ {q:"To retrieve STATIC user-profile memories at conversation start, call search_memories with:",o:["items = full history","a scope but NO items","update_delay = 0","the thread ID"],a:1},
+ {q:"Memory search returns nothing though you stored data. Most likely:",o:["Model too small","scope used on search ≠ scope used on write","Thread deleted","Wrong region only"],a:1},
+ {q:"For durable state across days/weeks of a stop-and-go workflow, a good fit is:",o:["A single chat-completions call","Hosted agent per-project sandbox ($HOME) / durable-task extension","Bigger max_tokens","Client-side cookies"],a:1}
+];
+let examTime=240,examTimer=null,examStarted=false;
+const eh=document.getElementById('examHost'),etimer=document.getElementById('examTimer');
+exam.forEach((item,i)=>{
+  const d=document.createElement('div');d.className='q';
+  d.innerHTML=`<p class="stem">${i+1}. ${item.q}</p>`;
+  item.o.forEach((op,j)=>{
+    const el=document.createElement('div');el.className='opt';el.textContent=op;
+    el.dataset.i=i;el.dataset.j=j;
+    el.onclick=()=>{if(!examStarted)return;d.querySelectorAll('.opt').forEach(x=>x.classList.remove('correct'));el.classList.add('correct');el.dataset.picked=1;d.dataset.pick=j;};
+    d.appendChild(el);
+  });
+  eh.appendChild(d);
+});
+document.getElementById('startExam').onclick=()=>{
+  examStarted=true;eh.style.opacity=1;eh.style.pointerEvents='auto';
+  document.getElementById('startExam').style.display='none';
+  document.getElementById('submitExam').style.display='inline-block';
+  examTimer=setInterval(()=>{examTime--;const m=String(Math.floor(examTime/60)).padStart(2,'0'),s=String(examTime%60).padStart(2,'0');etimer.textContent=`${m}:${s}`;if(examTime<=0)finishExam();},1000);
+};
+document.getElementById('submitExam').onclick=finishExam;
+function finishExam(){
+  clearInterval(examTimer);examStarted=false;
+  let sc=0;
+  eh.querySelectorAll('.q').forEach((d,i)=>{
+    const pick=d.dataset.pick;
+    d.querySelectorAll('.opt').forEach(x=>x.classList.add('disabled'));
+    if(pick!=null&&Number(pick)===exam[i].a){sc++;}
+    else{const correct=d.querySelectorAll('.opt')[exam[i].a];correct.classList.add('correct');if(pick!=null)d.querySelectorAll('.opt')[Number(pick)].classList.add('wrong');}
+  });
+  const pct=Math.round(sc/exam.length*100);
+  document.getElementById('examResult').innerHTML=`Result: <b>${sc}/${exam.length}</b> (${pct}%) — ${pct>=83?'✅ Pass':'🔁 Review the layers and retry'}`;
+  document.getElementById('submitExam').style.display='none';
+  markDone('#exam');saveProgress();
+}
+
+/* ---------- INTERVIEW Q&A ---------- */
+const ia=[
+ ["Is Foundry Agent Service stateful or stateless?","Both, depending on layer. A raw model call is stateless. A thread is stateful for that session (history auto-managed). Across sessions it's stateless unless you add the Memory Store. So the honest answer is: session-stateful by default, long-term-stateful when you enable memory."],
+ ["Where are threads stored, and can I control that?","In Basic setup, in a Microsoft-managed, logically isolated storage account. In Standard setup, in your own resources — Cosmos DB for conversation state — which is the Bring-Your-Own path used for compliance, CMK, retention, and regional resilience."],
+ ["A user's preference from yesterday should apply today in a new chat. How?","Layer ③. Create a Memory Store, attach the memory_search_preview tool to the agent, and scope memories per user (scope = {{$userId}}). Preferences are extracted, consolidated, and recalled in future conversations after the update_delay commits them."],
+ ["What's update_delay and why does it exist?","A debounce window. Writes to long-term memory only commit after that many seconds of inactivity, so you don't thrash the store mid-conversation. Default ≈ 300s; set it to 0 in tests to commit immediately."],
+ ["How do you handle GDPR-style deletion?","Delete by scope to remove one user's memories while keeping the store, or delete the whole store. Set default_ttl_seconds for automatic expiry, keep a tamper-evident audit trail, and expose item-level edit/delete to users."],
+ ["Basic or Standard — how do you choose in an interview scenario?","Basic for POCs and speed (nothing to run). Standard when the requirement mentions ownership, compliance, CMK, data residency, custom retention, or geo-resilience — because the data then lives in resources you own and can fail over."],
+ ["Static vs contextual memory retrieval?","Static: inject user-profile memories at conversation start (search with scope, no items). Contextual: per-turn, pass the latest messages so semantically relevant profile + chat-summary memories come back."]
+];
+const iah=document.getElementById('iaHost');
+ia.forEach((pair)=>{
+  const w=document.createElement('div');w.className='accordion';
+  w.innerHTML=`<button>${pair[0]}<span>＋</span></button><div class="body">${pair[1]}</div>`;
+  w.querySelector('button').onclick=()=>{w.classList.toggle('open');w.querySelector('span').textContent=w.classList.contains('open')?'－':'＋';markDone('#interview');saveProgress();};
+  iah.appendChild(w);
+});
+
+/* ---------- PROGRESS + TOC ---------- */
+const sections=['#objectives','#model','#graph','#layer1','#layer2','#layer3','#portal','#demo','#decide','#quiz','#exam','#interview','#notes'];
+let done=JSON.parse(localStorage.getItem('fs_done')||'[]');
+function markDone(id){if(!done.includes(id)){done.push(id);}}
+function saveProgress(){localStorage.setItem('fs_done',JSON.stringify(done));renderProgress();}
+function renderProgress(){
+  const pct=Math.round(done.length/sections.length*100);
+  document.getElementById('tocBar').style.width=pct+'%';
+  document.getElementById('progressMini').textContent=`${done.length}/${sections.length} sections · ${pct}%`;
+  document.querySelectorAll('#toc a').forEach(a=>{const h=a.getAttribute('href');if(done.includes(h))a.classList.add('done');else a.classList.remove('done');});
+}
+// mark a section done when scrolled into view
+const io=new IntersectionObserver((entries)=>{entries.forEach(en=>{if(en.isIntersecting){markDone('#'+en.target.id);saveProgress();}});},{threshold:.4});
+sections.forEach(s=>{const el=document.querySelector(s);if(el)io.observe(el);});
+renderProgress();updateQuizScore();
+
+/* ---------- RESET ---------- */
+document.getElementById('resetBtn').onclick=()=>{
+  if(confirm('Clear notes, progress, quiz and exam state for this browser?')){
+    ['fs_notes','fs_done'].forEach(k=>localStorage.removeItem(k));location.reload();
+  }
+};
+</script>
+</body>
+</html>

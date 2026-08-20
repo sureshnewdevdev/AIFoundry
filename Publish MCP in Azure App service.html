@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Publish Python MCP to Azure App Service from VS Code</title>
+<style>
+:root{--nav:#09203d;--blue:#2563eb;--cyan:#0891b2;--green:#047857;--orange:#b45309;--red:#b91c1c;--bg:#f3f7fc;--ink:#172033;--line:#d8e2ef}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 system-ui,"Segoe UI",sans-serif}header{padding:52px 7%;color:#fff;background:radial-gradient(circle at 85% 10%,#0ea5e955,transparent 35%),linear-gradient(125deg,var(--nav),#164e9a)}header h1{font-size:clamp(2rem,5vw,3.8rem);line-height:1.1;margin:0 0 12px;max-width:1000px}header p{max-width:900px;font-size:1.14rem}.badge{display:inline-block;padding:6px 11px;border:1px solid #ffffff66;border-radius:999px;background:#ffffff18;margin-bottom:17px}.layout{display:grid;grid-template-columns:270px minmax(0,1fr);max-width:1420px;margin:auto}.toc{position:sticky;top:0;height:100vh;overflow:auto;padding:22px 18px;background:#e8f0fa;border-right:1px solid var(--line)}.toc b{display:block;margin:0 8px 10px}.toc a{display:block;padding:7px 10px;text-decoration:none;color:#31506f;border-radius:8px}.toc a:hover{background:#d7e7ff;color:#154bb8}main{padding:32px 5% 80px;max-width:1060px}section{background:#fff;margin-bottom:23px;padding:28px;border:1px solid #e4ebf4;border-radius:18px;box-shadow:0 7px 26px #12315d0c}h2{margin-top:0;color:#123d76}h3{color:#1d4ed8;margin-top:27px}.flow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:22px 0}.node{padding:14px 18px;background:#e5efff;border:1px solid #8ab5fb;border-radius:12px;font-weight:750;text-align:center}.arrow{font-size:1.55rem;color:var(--blue)}pre{position:relative;background:#0d1726;color:#e5edf8;padding:18px;border-radius:12px;overflow:auto;white-space:pre}code{font-family:Consolas,"Cascadia Code",monospace}.inline{padding:2px 6px;border-radius:5px;background:#edf2f8;color:#17458b}.copy{float:right;border:0;border-radius:7px;padding:5px 9px;background:#2d5a94;color:#fff;cursor:pointer}.callout{margin:16px 0;padding:15px 18px;border-left:5px solid var(--cyan);border-radius:9px;background:#ecfeff}.warn{border-color:#f59e0b;background:#fffbeb}.danger{border-color:#ef4444;background:#fef2f2}.ok{border-color:#10b981;background:#ecfdf5}.steps{counter-reset:s}.step{counter-increment:s;position:relative;padding-left:48px;margin:24px 0}.step:before{content:counter(s);position:absolute;left:0;top:0;width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:var(--blue);color:#fff;font-weight:800}table{width:100%;border-collapse:collapse;margin:15px 0}th,td{padding:11px;border:1px solid var(--line);text-align:left;vertical-align:top}th{background:#e8f1ff}.checklist label{display:block;padding:8px;border-bottom:1px dashed var(--line)}.checklist input{width:18px;height:18px;margin-right:8px;vertical-align:middle}.answer{display:none;margin-top:8px;padding:10px;border-radius:8px;background:#ecfdf5;color:#065f46}.quiz button,.reset{border:0;background:var(--blue);color:#fff;padding:9px 14px;border-radius:8px;cursor:pointer}@media(max-width:850px){.layout{display:block}.toc{position:relative;height:auto}.toc a{display:inline-block}main{padding:20px}.flow{flex-direction:column}.arrow{transform:rotate(90deg)}}
+</style>
+</head>
+<body>
+<header><span class="badge">ITTechGenie Training Guide</span><h1>Publish a Python MCP Server to Azure App Service from VS Code</h1><p>Python 3.11 · Streamable HTTP · Azure App Service · MCP Inspector · Logging and troubleshooting</p></header>
+<div class="layout">
+<nav class="toc"><b>Contents</b><a href="#goal">1. Goal</a><a href="#architecture">2. Architecture</a><a href="#requirements">3. Requirements</a><a href="#server">4. HTTP server</a><a href="#local">5. Local test</a><a href="#folder">6. Deploy folder</a><a href="#create">7. Create App Service</a><a href="#configure">8. Configure Azure</a><a href="#deploy">9. Deploy</a><a href="#test">10. Test remotely</a><a href="#logs">11. Logs</a><a href="#errors">12. Troubleshooting</a><a href="#security">13. Security</a><a href="#checklist">14. Checklist</a></nav>
+<main>
+<section id="goal"><h2>1. Goal</h2><p>Publish the existing Python MCP server at an Azure endpoint:</p><pre><button class="copy" onclick="copyCode(this)">Copy</button><code>https://YOUR-APP-NAME.azurewebsites.net/mcp</code></pre><div class="callout ok"><b>Key point:</b> Local Inspector uses <code class="inline">stdio</code>. Azure uses <code class="inline">streamable-http</code>. Do not deploy <code class="inline">run_inspector.bat</code> as the web server.</div></section>
+
+<section id="architecture"><h2>2. Architecture</h2><div class="flow"><div class="node">MCP Client<br>or Inspector</div><div class="arrow">→</div><div class="node">HTTPS<br>/mcp</div><div class="arrow">→</div><div class="node">Azure App Service<br>Python 3.11</div><div class="arrow">→</div><div class="node">Tools, Resources<br>and Prompts</div></div><table><tr><th>Local</th><th>Azure</th></tr><tr><td>Inspector launches server through stdio.</td><td>Client connects to a permanent HTTPS URL.</td></tr><tr><td>No server port required.</td><td>Server listens on port 8000.</td></tr><tr><td>Host is the local computer.</td><td>Host is Azure App Service Linux.</td></tr></table></section>
+
+<section id="requirements"><h2>3. Requirements</h2><ul><li>VS Code</li><li>Python 3.11</li><li>Node.js for MCP Inspector</li><li>Azure CLI</li><li>An Azure subscription with permission to create App Service resources</li></ul><h3>VS Code extensions</h3><ul><li>Python — Microsoft</li><li>Azure Resources — Microsoft</li><li>Azure App Service — Microsoft</li></ul><pre><button class="copy" onclick="copyCode(this)">Copy</button><code>py -3.11 --version
+az version
+node --version
+npx --version</code></pre></section>
+
+<section id="server"><h2>4. Configure the Streamable HTTP server</h2><p>Replace <code class="inline">src\mcp_demo\http_server.py</code> with:</p><pre><button class="copy" onclick="copyCode(this)">Copy</button><code>&quot;&quot;&quot;Run the MCP server over Streamable HTTP locally or in Azure.&quot;&quot;&quot;
+
+import os
+
+from mcp.server.transport_security import TransportSecuritySettings
+from mcp_demo.server import mcp
+
+
+def allowed_hosts() -&gt; list[str]:
+    hosts = [
+        &quot;localhost&quot;,
+        &quot;localhost:*&quot;,
+        &quot;127.0.0.1&quot;,
+        &quot;127.0.0.1:*&quot;,
+    ]
+
+    azure_hostname = os.getenv(&quot;WEBSITE_HOSTNAME&quot;, &quot;&quot;).strip()
+
+    if azure_hostname:
+        hosts.extend([azure_hostname, f&quot;{azure_hostname}:*&quot;])
+
+    return hosts
+
+
+security = TransportSecuritySettings(
+    enable_dns_rebinding_protection=True,
+    allowed_hosts=allowed_hosts(),
+    allowed_origins=[
+        &quot;http://localhost:6274&quot;,
+        &quot;http://127.0.0.1:6274&quot;,
+    ],
+)
+
+
+if __name__ == &quot;__main__&quot;:
+    port = int(
+        os.getenv(
+            &quot;PORT&quot;,
+            os.getenv(&quot;WEBSITES_PORT&quot;, &quot;8000&quot;),
+        )
+    )
+
+    mcp.run(
+        transport=&quot;streamable-http&quot;,
+        host=&quot;0.0.0.0&quot;,
+        port=port,
+        streamable_http_path=&quot;/mcp&quot;,
+        json_response=True,
+        stateless_http=True,
+        transport_security=security,
+    )</code></pre><div class="callout warn">The Azure hostname must be allowlisted. Without this, a deployed server can return <code class="inline">421 Invalid Host header</code>.</div></section>
+
+<section id="local"><h2>5. Test locally</h2><div class="steps"><div class="step"><b>Start the HTTP server</b><pre><button class="copy" onclick="copyCode(this)">Copy</button><code>.\.venv\Scripts\python.exe -m mcp_demo.http_server</code></pre><p>Expected: <code class="inline">Uvicorn running on http://0.0.0.0:8000</code>.</p></div><div class="step"><b>Open a second terminal and run the client</b><pre><button class="copy" onclick="copyCode(this)">Copy</button><code>.\.venv\Scripts\python.exe examples\04_http_client.py</code></pre></div><div class="step"><b>Stop the server</b><p>Press <code class="inline">Ctrl+C</code> in the server terminal.</p></div></div></section>
+
+<section id="folder"><h2>6. Create a clean Azure deployment folder</h2><p>Run from the project root:</p><pre><button class="copy" onclick="copyCode(this)">Copy</button><code>New-Item -ItemType Directory -Path azure_deploy -Force
+
+Copy-Item requirements.txt azure_deploy\
+Copy-Item pyproject.toml azure_deploy\
+Copy-Item src azure_deploy\src -Recurse -Force
+Copy-Item data azure_deploy\data -Recurse -Force</code></pre><h3>Required structure</h3><pre><code>azure_deploy
+├── requirements.txt
+├── pyproject.toml
+├── data
+│   ├── employees.json
+│   └── inventory.json
+└── src
+    └── mcp_demo
+        ├── __init__.py
+        ├── server.py
+        └── http_server.py</code></pre><div class="callout"><b>VS Code:</b> Select <b>File → Open Folder</b> and open <code class="inline">azure_deploy</code>. Do not deploy <code class="inline">.venv</code>, tests, or local cache files.</div></section>
+
+<section id="create"><h2>7. Create Azure App Service from VS Code</h2><div class="steps"><div class="step"><b>Sign in</b><p>Click the Azure icon → <b>Sign in to Azure</b>.</p></div><div class="step"><b>Create the app</b><p>Press <code class="inline">Ctrl+Shift+P</code> and run:</p><pre><code>Azure App Service: Create New Web App (Advanced)</code></pre></div><div class="step"><b>Select values</b><table><tr><th>Setting</th><th>Value</th></tr><tr><td>Name</td><td>Globally unique, such as <code>ittechgenie-mcp-gopi-2026</code></td></tr><tr><td>Resource group</td><td><code>rg-mcp-demo</code></td></tr><tr><td>OS</td><td>Linux</td></tr><tr><td>Runtime</td><td>Python 3.11</td></tr><tr><td>Region</td><td>Central India or nearest available</td></tr><tr><td>Plan</td><td>B1 recommended for a stable demo</td></tr></table></div></div><div class="callout warn">B1 incurs Azure charges. Stop or delete the resource after the demonstration if it is no longer required.</div></section>
+
+<section id="configure"><h2>8. Configure App Service</h2><h3>Add application settings in VS Code</h3><p>Azure sidebar → App Services → expand your app → right-click <b>Application Settings</b> → <b>Add New Setting</b>.</p><table><tr><th>Name</th><th>Value</th><th>Purpose</th></tr><tr><td><code>SCM_DO_BUILD_DURING_DEPLOYMENT</code></td><td><code>true</code></td><td>Install requirements during deployment.</td></tr><tr><td><code>WEBSITES_PORT</code></td><td><code>8000</code></td><td>Internal application port.</td></tr><tr><td><code>PYTHONPATH</code></td><td><code>/home/site/wwwroot/src</code></td><td>Make the MCP package importable.</td></tr></table><h3>Set startup command from VS Code terminal</h3><pre><button class="copy" onclick="copyCode(this)">Copy</button><code>az login
+$RG = &quot;rg-mcp-demo&quot;
+$APP = &quot;YOUR-UNIQUE-WEB-APP-NAME&quot;
+az webapp config set --resource-group $RG --name $APP --startup-file &quot;python -m mcp_demo.http_server&quot;</code></pre><p>If Azure CLI is unavailable: right-click the app → <b>Open in Portal</b> → <b>Settings → Configuration → General settings</b> → Startup Command:</p><pre><code>python -m mcp_demo.http_server</code></pre></section>
+
+<section id="deploy"><h2>9. Deploy from VS Code</h2><div class="steps"><div class="step"><b>Confirm folder</b><p>The open VS Code workspace must be <code class="inline">azure_deploy</code>.</p></div><div class="step"><b>Deploy</b><p>Azure sidebar → right-click the web app → <b>Deploy to Web App</b>.</p></div><div class="step"><b>Confirm overwrite</b><p>Select <b>Deploy</b> when prompted.</p></div><div class="step"><b>Wait for success</b><p>Watch the VS Code Output panel for <b>Deployment completed successfully</b>.</p></div><div class="step"><b>Restart</b><p>Right-click the web app → <b>Restart</b>.</p></div></div><div class="callout ok">Endpoint: <code class="inline">https://YOUR-APP-NAME.azurewebsites.net/mcp</code></div></section>
+
+<section id="test"><h2>10. Test the Azure MCP endpoint</h2><p>Do not use <code class="inline">run_inspector.bat</code>, because it launches the local stdio server. Start a standalone Inspector:</p><pre><button class="copy" onclick="copyCode(this)">Copy</button><code>npx -y @modelcontextprotocol/inspector</code></pre><ol><li>Open <b>Servers</b>.</li><li>Add <b>Azure MCP Demo</b>.</li><li>Select <b>Streamable HTTP</b>.</li><li>Enter <code class="inline">https://YOUR-APP-NAME.azurewebsites.net/mcp</code>.</li><li>Click <b>Connect</b>.</li></ol><table><tr><th>Capability</th><th>Demo</th></tr><tr><td>Tool</td><td><code>calculate</code>: multiply 12 × 5 → 60</td></tr><tr><td>Tool</td><td><code>search_employees</code>: query Python</td></tr><tr><td>Tool</td><td><code>suggest_reorder</code>: MIC-401, 10, 30</td></tr><tr><td>Resource</td><td><code>policy://reorder</code></td></tr><tr><td>Prompt</td><td><code>inventory_risk_review</code></td></tr></table><div class="callout">The <code class="inline">/mcp</code> URL is a protocol endpoint, not a normal webpage. Test it with Inspector or an MCP client.</div></section>
+
+<section id="logs"><h2>11. Stream Azure logs</h2><p>Azure sidebar → right-click the app → <b>Start Streaming Logs</b>. Healthy messages include:</p><pre><code>Application startup complete
+Uvicorn running on http://0.0.0.0:8000
+StreamableHTTP session manager started</code></pre><p>Terminal alternative:</p><pre><button class="copy" onclick="copyCode(this)">Copy</button><code>az webapp log tail --resource-group $RG --name $APP</code></pre></section>
+
+<section id="errors"><h2>12. Troubleshooting</h2><table><tr><th>Error</th><th>Cause</th><th>Fix</th></tr><tr><td>Default Azure page</td><td>Startup command missing</td><td>Set <code>python -m mcp_demo.http_server</code>.</td></tr><tr><td><code>No module named mcp_demo</code></td><td>Missing Python path</td><td>Set <code>PYTHONPATH=/home/site/wwwroot/src</code>.</td></tr><tr><td><code>No module named mcp</code></td><td>Requirements not installed</td><td>Keep requirements at root and enable build during deployment.</td></tr><tr><td><code>421 Invalid Host header</code></td><td>Azure host rejected</td><td>Deploy the updated transport-security code.</td></tr><tr><td>Connection timeout</td><td>Wrong binding</td><td>Use <code>0.0.0.0:8000</code>.</td></tr><tr><td>Tools missing</td><td>Wrong endpoint</td><td>Use the URL ending in <code>/mcp</code>.</td></tr><tr><td>Huge deployment</td><td>.venv included</td><td>Deploy only <code>azure_deploy</code>.</td></tr></table></section>
+
+<section id="security"><h2>13. Production security</h2><div class="callout danger"><b>Warning:</b> The classroom server has no user authentication. Never expose confidential business data through it.</div><ul><li>Add MCP-compatible OAuth for real users.</li><li>Use App Service access restrictions.</li><li>Store secrets in Azure Key Vault.</li><li>Use managed identity.</li><li>Enable Application Insights.</li><li>Require human approval for write, delete, purchase, and messaging tools.</li></ul><h3>Stop the demo</h3><pre><button class="copy" onclick="copyCode(this)">Copy</button><code>az webapp stop --resource-group $RG --name $APP</code></pre></section>
+
+<section id="checklist"><h2>14. Deployment checklist</h2><div class="checklist"><label><input type="checkbox" data-k="c1">Python 3.11 Linux App Service created</label><label><input type="checkbox" data-k="c2">HTTP server binds to 0.0.0.0:8000</label><label><input type="checkbox" data-k="c3">Azure hostname security configured</label><label><input type="checkbox" data-k="c4">requirements.txt is at deployment root</label><label><input type="checkbox" data-k="c5">Build during deployment is enabled</label><label><input type="checkbox" data-k="c6">PYTHONPATH points to /home/site/wwwroot/src</label><label><input type="checkbox" data-k="c7">Startup command configured</label><label><input type="checkbox" data-k="c8">VS Code deployment succeeded</label><label><input type="checkbox" data-k="c9">Logs show successful startup</label><label><input type="checkbox" data-k="c10">Inspector connects to /mcp</label></div><p><button class="reset" onclick="resetChecks()">Reset checklist</button></p></section>
+
+<section class="quiz"><h2>Quick knowledge check</h2><p><b>Which transport should be deployed to Azure?</b></p><button onclick="show('a1')">Show answer</button><div class="answer" id="a1">Streamable HTTP. stdio is for local subprocess-based servers.</div><p><b>Why configure PYTHONPATH?</b></p><button onclick="show('a2')">Show answer</button><div class="answer" id="a2">The project package is under src, so Azure must include that directory when importing mcp_demo.</div></section>
+
+<section><h2>Official references</h2><ul><li><a href="https://py.sdk.modelcontextprotocol.io/run/" target="_blank">MCP Python SDK: Running your server</a></li><li><a href="https://py.sdk.modelcontextprotocol.io/run/deploy/" target="_blank">MCP Python SDK: Deploy and scale</a></li><li><a href="https://learn.microsoft.com/en-us/azure/app-service/quickstart-python" target="_blank">Microsoft: Python App Service quickstart</a></li><li><a href="https://learn.microsoft.com/en-us/azure/app-service/deploy-zip" target="_blank">Microsoft: ZIP deployment and build automation</a></li><li><a href="https://learn.microsoft.com/en-us/azure/app-service/configure-language-python" target="_blank">Microsoft: Configure Linux Python apps</a></li></ul></section>
+</main></div>
+<script>
+function copyCode(b){const c=b.parentElement.querySelector('code').innerText;navigator.clipboard.writeText(c);b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1000)}
+function show(id){document.getElementById(id).style.display='block'}
+document.querySelectorAll('.checklist input').forEach(x=>{x.checked=localStorage.getItem(x.dataset.k)==='1';x.onchange=()=>localStorage.setItem(x.dataset.k,x.checked?'1':'0')})
+function resetChecks(){document.querySelectorAll('.checklist input').forEach(x=>{x.checked=false;localStorage.removeItem(x.dataset.k)})}
+</script>
+</body></html>

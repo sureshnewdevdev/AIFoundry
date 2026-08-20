@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Microsoft Foundry — Evaluate an Agent with Your Own Tests</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+  :root{
+    --bg:#f5f8f6; --panel:#ffffff; --panel2:#f1f5f3;
+    --ink:#14201b; --soft:#4b5a52; --faint:#7d8b83;
+    --line:#e0e8e3; --line2:#cdd8d1;
+    --pass:#0f9d6e; --pass-bg:#e3f6ee;
+    --warn:#b26a09; --warn-bg:#fbeedd;
+    --fail:#d6455f; --fail-bg:#fde7ec;
+    --accent:#0f9d6e; --accent2:#3a7de0; --accent2-bg:#e9f0fd;
+    --code:#0f1a16; --codeink:#d3e6dc;
+    --radius:14px; --shadow:0 8px 26px rgba(20,40,30,.07);
+  }
+  html[data-theme="dark"]{
+    --bg:#0a1310; --panel:#0f1a15; --panel2:#132018;
+    --ink:#e6efea; --soft:#a3b3aa; --faint:#6f8078;
+    --line:#1e2c25; --line2:#293a31;
+    --pass:#39d29a; --pass-bg:#0f2a20;
+    --warn:#e6a35a; --warn-bg:#2c2011;
+    --fail:#ff7a93; --fail-bg:#301620;
+    --accent:#39d29a; --accent2:#6aa6ff; --accent2-bg:#122036;
+    --code:#08120e; --codeink:#c6dcd2;
+    --shadow:0 10px 30px rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+  .wrap{display:grid;grid-template-columns:288px minmax(0,1fr);max-width:1260px;margin:0 auto}
+  aside{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;padding:24px 18px 40px;border-right:1px solid var(--line);background:var(--panel2)}
+  main{padding:42px 46px 90px;min-width:0}
+
+  .brand{display:flex;gap:11px;align-items:center;margin-bottom:6px}
+  .brand .mk{width:36px;height:36px;border-radius:9px;flex:none;background:conic-gradient(from 200deg,var(--pass),var(--accent2),var(--warn),var(--pass));box-shadow:var(--shadow)}
+  .brand b{font-family:'Space Grotesk';font-size:15px;line-height:1.15}
+  .brand small{display:block;color:var(--faint);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+  .toc{margin-top:20px;font-size:13.5px}
+  .toc a{display:flex;gap:10px;align-items:baseline;text-decoration:none;color:var(--soft);padding:6px 10px;border-radius:8px;border-left:2px solid transparent}
+  .toc a:hover,.toc a.active{background:var(--panel);color:var(--ink);border-left-color:var(--accent)}
+  .toc a .n{font-family:'JetBrains Mono';font-size:10.5px;color:var(--faint);width:15px;flex:none}
+  .tbtn{margin-top:22px;display:inline-flex;gap:8px;align-items:center;cursor:pointer;background:var(--panel);border:1px solid var(--line2);color:var(--soft);padding:8px 12px;border-radius:99px;font-size:12.5px;font-weight:500}
+  .tbtn:hover{color:var(--ink)}
+
+  .eyebrow{font-family:'JetBrains Mono';font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+  h1{font-family:'Space Grotesk';font-weight:700;letter-spacing:-.025em;font-size:clamp(27px,4.2vw,42px);line-height:1.07;margin:.32em 0 .3em}
+  .lede{font-size:17px;color:var(--soft);max-width:64ch}
+  .pillbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .pill{font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:99px;background:var(--pass-bg);color:var(--pass)}
+  .pill.b{background:var(--accent2-bg);color:var(--accent2)}
+
+  section{margin:46px 0;scroll-margin-top:20px}
+  .sh{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  h2{font-family:'Space Grotesk';font-weight:700;letter-spacing:-.02em;font-size:24px;margin:0}
+  .tag{font-family:'JetBrains Mono';font-size:12px;font-weight:600;padding:3px 9px;border-radius:7px;color:#06140f;background:var(--accent)}
+  .tag.b{background:var(--accent2);color:#fff}
+  h3{font-family:'Space Grotesk';font-weight:600;font-size:17.5px;margin:28px 0 8px}
+  p{margin:0 0 14px} b{font-weight:600}
+  a.inl{color:var(--accent2);text-decoration:none;border-bottom:1px solid var(--line2)}
+
+  ul.tick{list-style:none;padding:0;margin:14px 0}
+  ul.tick li{position:relative;padding:5px 0 5px 26px}
+  ul.tick li::before{content:"▸";position:absolute;left:4px;color:var(--accent);top:5px}
+
+  ol.steps{list-style:none;counter-reset:s;padding:0;margin:18px 0}
+  ol.steps>li{counter-increment:s;position:relative;padding:2px 0 20px 50px;border-left:2px solid var(--line);margin-left:14px}
+  ol.steps>li:last-child{border-left-color:transparent}
+  ol.steps>li::before{content:counter(s);position:absolute;left:-15px;top:-2px;width:30px;height:30px;border-radius:50%;background:var(--panel);border:2px solid var(--accent);color:var(--accent);font-family:'JetBrains Mono';font-weight:600;font-size:13px;display:grid;place-items:center}
+  section.blue ol.steps>li::before{border-color:var(--accent2);color:var(--accent2)}
+  .hint{color:var(--faint);font-size:14px}
+
+  .code{position:relative;background:var(--code);border:1px solid var(--line);border-radius:12px;margin:16px 0;overflow:hidden}
+  .code .hd{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line);font-family:'JetBrains Mono';font-size:11.5px;color:var(--faint)}
+  .code pre{margin:0;padding:16px 18px;overflow-x:auto}
+  .code code{font-family:'JetBrains Mono';font-size:12.8px;color:var(--codeink);line-height:1.72;white-space:pre}
+  .copy{cursor:pointer;background:transparent;border:1px solid var(--line2);color:var(--faint);font-family:'JetBrains Mono';font-size:11px;padding:3px 9px;border-radius:6px}
+  .copy:hover{color:var(--ink);border-color:var(--faint)}
+  .kw{color:#ff9ec7} .fn{color:#8fd0ff} .st{color:#9fe6b0} .cm{color:#5f7268;font-style:italic} .nu{color:#e6a35a}
+
+  .note{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--panel);border-radius:10px;padding:14px 18px;margin:18px 0;font-size:14.5px}
+  .note.warn{border-left-color:var(--warn)} .note.blue{border-left-color:var(--accent2)}
+  .note b{font-family:'Space Grotesk';display:block;margin-bottom:3px;font-size:12.5px;color:var(--accent)}
+  .note.warn b{color:var(--warn)} .note.blue b{color:var(--accent2)}
+
+  .tblwrap{overflow-x:auto;margin:18px 0;border:1px solid var(--line);border-radius:12px}
+  table{border-collapse:collapse;width:100%;font-size:13.7px;min-width:540px}
+  th,td{text-align:left;padding:11px 15px;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{background:var(--panel2);font-family:'Space Grotesk';font-weight:600;font-size:12.5px;color:var(--soft)}
+  tbody tr:last-child td{border-bottom:none}
+  .chip{display:inline-block;font-family:'JetBrains Mono';font-size:10.5px;padding:2px 7px;border-radius:5px;background:var(--pass-bg);color:var(--pass)}
+  .chip.b{background:var(--accent2-bg);color:var(--accent2)}
+
+  /* eval flow strip */
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:18px 0;padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+  .fnode{font-family:'JetBrains Mono';font-size:12px;font-weight:600;padding:9px 13px;border-radius:9px;border:1px solid var(--line2);background:var(--panel2)}
+  .fnode.a{color:var(--accent);border-color:var(--accent)} .fnode.b{color:var(--accent2);border-color:var(--accent2)} .fnode.p{color:var(--pass);border-color:var(--pass)}
+  .arw{color:var(--faint);font-family:'JetBrains Mono'}
+
+  footer{margin-top:56px;padding-top:22px;border-top:1px solid var(--line);color:var(--faint);font-size:13px}
+  @media(max-width:940px){.wrap{grid-template-columns:1fr}aside{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line)}.toc{display:grid;grid-template-columns:1fr 1fr;gap:2px}main{padding:28px 20px 70px}}
+  @media print{aside,.tbtn{display:none}.wrap{display:block}main{padding:0}.code,.note,section{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside>
+    <div class="brand"><div class="mk"></div><div><b>Foundry Evaluation</b><small>Agent testing · handout</small></div></div>
+    <nav class="toc" id="toc">
+      <a href="#s0"><span class="n">00</span>Why evaluate?</a>
+      <a href="#s1"><span class="n">01</span>Prerequisites</a>
+      <a href="#s2"><span class="n">02</span>Create a simple agent</a>
+      <a href="#s3"><span class="n">03</span>The evaluation process</a>
+      <a href="#s4"><span class="n">04</span>Include your user tests</a>
+      <a href="#s5"><span class="n">05</span>Run the evaluation (portal)</a>
+      <a href="#s6"><span class="n">06</span>Read the results</a>
+      <a href="#s7"><span class="n">07</span>Evaluate from code (SDK)</a>
+      <a href="#s8"><span class="n">08</span>Troubleshooting</a>
+      <a href="#s9"><span class="n">09</span>Sources</a>
+    </nav>
+    <div class="tbtn" id="themeBtn">🌗 <span>Theme</span></div>
+  </aside>
+
+  <main>
+    <div class="eyebrow">Trainer handout · updated Aug 2026</div>
+    <h1>Test an agent with evaluation —<br>and your own user tests</h1>
+    <p class="lede">Create a simple agent in Microsoft Foundry, then run evaluations that score every response like unit tests. You'll write your own test dataset (your "user tests"), run it in the portal and from code, and read the pass/fail results.</p>
+    <div class="pillbar">
+      <span class="pill">Create the agent</span>
+      <span class="pill b">Author user tests</span>
+      <span class="pill">Run &amp; score</span>
+    </div>
+
+    <!-- 00 -->
+    <section id="s0">
+      <div class="sh"><span class="tag">00</span><h2>Why evaluate — and what it actually is</h2></div>
+      <p>A working demo isn't a shippable agent. <b>Evaluation</b> turns "it looked fine when I tried it" into evidence. You run the agent against a <b>test dataset</b> and let <b>evaluators</b> score every response. The evaluators behave like unit tests: most return a <b>pass/fail per test case</b> plus a short reason. From that you get a baseline, you can set a <b>release gate</b> (for example, "85% task adherence or we don't ship"), and you can compare two agent versions to see whether a prompt change helped or hurt.</p>
+      <div class="flow">
+        <span class="fnode b">Test dataset</span><span class="arw">──▶</span>
+        <span class="fnode a">Your agent</span><span class="arw">──▶</span>
+        <span class="fnode a">Response</span><span class="arw">──▶</span>
+        <span class="fnode a">Evaluators (GPT judge)</span><span class="arw">──▶</span>
+        <span class="fnode p">Pass / fail + reason</span>
+      </div>
+      <div class="note"><b>Status</b> Model and dataset evaluation are GA; <b>agent</b> evaluation was public preview as of April 2026. The observability suite (evaluate, trace, monitor) reached GA in March 2026 and writes to Azure Monitor.</div>
+    </section>
+
+    <!-- 01 -->
+    <section id="s1">
+      <div class="sh"><span class="tag">01</span><h2>Prerequisites</h2></div>
+      <ul class="tick">
+        <li>A <b>Microsoft Foundry project</b>.</li>
+        <li>An <b>agent</b> in the project (we create one below).</li>
+        <li>An <b>Azure OpenAI GPT deployment</b> to act as the <b>judge</b> model for AI-assisted quality evaluators — e.g. <span class="chip">gpt-4o-mini</span> or <span class="chip">gpt-4.1-mini</span>. (Safety-only runs don't need it.)</li>
+        <li>The <b>Foundry User</b> role on the project (recently renamed from <i>Azure AI User</i>).</li>
+      </ul>
+    </section>
+
+    <!-- 02 -->
+    <section id="s2">
+      <div class="sh"><span class="tag">02</span><h2>Create a simple agent</h2></div>
+      <ol class="steps">
+        <li><b>Open the Foundry portal</b> and select (or create) your project.</li>
+        <li><b>Create an agent.</b> Choose <b>Create an agent</b> / <b>Build → Agents → New</b>. A deployed model is usually pre-selected; if not, deploy one (e.g. <span class="chip">gpt-4o-mini</span>).</li>
+        <li><b>Name it</b> — e.g. <span class="chip">KnowledgeTest</span> — and <b>write scoped instructions</b>:
+          <div class="code"><div class="hd">instructions <button class="copy">Copy</button></div><pre><code>You answer questions about the company invoice process.
+Use only the connected knowledge; if the answer isn't there,
+say you don't know. Be concise and cite the source.</code></pre></div>
+        </li>
+        <li><b>(Optional) Add knowledge</b> — attach a File Search source or a Foundry IQ knowledge base so answers are grounded.</li>
+        <li><b>Test in the playground</b> with a couple of questions to confirm it responds. Now it's ready to evaluate.</li>
+      </ol>
+    </section>
+
+    <!-- 03 -->
+    <section id="s3">
+      <div class="sh"><span class="tag">03</span><h2>The evaluation process, explained</h2></div>
+      <p>Every evaluation answers one question: <i>for each input, how good was the agent's output?</i> There are three ways to supply the data, and three families of evaluators to score it.</p>
+
+      <h3>Three ways to supply data</h3>
+      <ul class="tick">
+        <li><b>Queries only</b> — you provide test questions; Foundry runs your agent to <i>generate</i> the responses at evaluation time, then scores them. This is the usual "test my agent" path.</li>
+        <li><b>Query + response pairs</b> — you already captured outputs; Foundry just scores them.</li>
+        <li><b>Existing production traffic</b> — point Foundry at data where it already lives (a Foundry response ID or an Application Insights trace) to score what actually happened.</li>
+      </ul>
+
+      <h3>Three families of evaluators</h3>
+      <p>Most evaluators use a GPT model as a <b>judge</b> and return a score (or pass/fail) with a written reason.</p>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Family</th><th>Examples</th><th>Answers…</th></tr></thead>
+        <tbody>
+          <tr><td><span class="chip">Agent</span></td><td>Intent resolution, Tool-call accuracy, Task adherence, Response completeness</td><td>Did the agent do the right thing, the right way? <span class="hint">(individual-turn scope)</span></td></tr>
+          <tr><td><span class="chip b">Quality</span></td><td>Groundedness, Relevance, Coherence, Fluency, Similarity</td><td>Is the answer correct, on-topic, and well-formed?</td></tr>
+          <tr><td><span class="chip">Safety</span></td><td>Hate/unfairness, Violence, Self-harm, Protected material</td><td>Is the output safe? <span class="hint">(individual-turn scope)</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Offline vs continuous</h3>
+      <ul class="tick">
+        <li><b>Offline</b> — run against a fixed test dataset before shipping; wire it into CI/CD as a release gate.</li>
+        <li><b>Continuous</b> — sample live production traffic and score it on a schedule to catch drift.</li>
+      </ul>
+      <div class="note blue"><b>Ground truth matters</b> Evaluators like Groundedness or Relevance can judge without a reference, but if you want a <i>correctness</i> signal, include a <b>ground_truth</b> for each test case. A dataset with only queries and responses and no ground truth can score misleadingly high because there's nothing to be "wrong" against.</div>
+    </section>
+
+    <!-- 04 -->
+    <section id="s4" class="blue">
+      <div class="sh"><span class="tag b">04</span><h2>Include your user tests (author a dataset)</h2></div>
+      <p>Your "user tests" are just a <b>test dataset</b> — one line per test case, in <b>JSONL</b> (or CSV). This is the part you own: the realistic questions your users actually ask.</p>
+
+      <h3>Minimal — queries only</h3>
+      <p>The service sends each query to your agent, captures the response, and scores it. Great for a first pass.</p>
+      <div class="code"><div class="hd">invoice-tests.jsonl <button class="copy">Copy</button></div><pre><code>{<span class="st">"query"</span>: <span class="st">"What is the maximum I can claim for meals per day?"</span>}
+{<span class="st">"query"</span>: <span class="st">"How long do I have to submit an expense claim?"</span>}
+{<span class="st">"query"</span>: <span class="st">"Who approves an invoice for 25,000 USD?"</span>}</code></pre></div>
+
+      <h3>Stronger — add ground truth (and context)</h3>
+      <p>Add the expected answer so correctness-based evaluators have something to compare against. Optionally add <span class="chip">context</span> (the grounding source).</p>
+      <div class="code"><div class="hd">invoice-tests-graded.jsonl <button class="copy">Copy</button></div><pre><code>{<span class="st">"query"</span>: <span class="st">"What is the maximum meal claim per day?"</span>,
+ <span class="st">"ground_truth"</span>: <span class="st">"USD 75 per day."</span>}
+{<span class="st">"query"</span>: <span class="st">"How long to submit a claim?"</span>,
+ <span class="st">"ground_truth"</span>: <span class="st">"Within 30 days of the expense."</span>}
+{<span class="st">"query"</span>: <span class="st">"Approver for 25,000 USD?"</span>,
+ <span class="st">"ground_truth"</span>: <span class="st">"A vice-president (10,001-50,000 USD tier)."</span>}</code></pre></div>
+
+      <p>The same data as CSV (turn-level only) — handy if your team keeps cases in a spreadsheet:</p>
+      <div class="code"><div class="hd">invoice-tests.csv <button class="copy">Copy</button></div><pre><code>query,response,context,ground_truth
+What is the max meal claim?,,Expense policy section 3,USD 75 per day.
+How long to submit a claim?,,Expense policy section 3,Within 30 days.</code></pre></div>
+
+      <h3>Simulated user (multi-turn "user test")</h3>
+      <p>To test a whole conversation instead of single turns, describe a scenario and let Foundry drive a <b>simulated user</b> against your agent. Each line needs an <span class="chip">id</span>, a <span class="chip">test_case_description</span>, and <span class="chip">desired_num_turns</span>.</p>
+      <div class="code"><div class="hd">sim-users.jsonl <button class="copy">Copy</button></div><pre><code>{<span class="st">"id"</span>: <span class="st">"case_1"</span>,
+ <span class="st">"test_case_description"</span>: <span class="st">"An employee disputes a rejected meal claim and asks for the limit and the appeal steps."</span>,
+ <span class="st">"desired_num_turns"</span>: <span class="nu">4</span>}
+{<span class="st">"id"</span>: <span class="st">"case_2"</span>,
+ <span class="st">"test_case_description"</span>: <span class="st">"A new joiner asks how to submit their first invoice and what fields are required."</span>,
+ <span class="st">"desired_num_turns"</span>: <span class="nu">3</span>}</code></pre></div>
+
+      <h3>No dataset yet? Bootstrap one</h3>
+      <ul class="tick">
+        <li><b>Synthetic generation</b> — Foundry generates query + ground_truth rows from your agent's instructions, an inline prompt, or an uploaded reference document. Best for prelaunch or low-traffic agents.</li>
+        <li><b>From traces</b> — convert real production conversations into an evaluation dataset once you have live traffic.</li>
+      </ul>
+      <div class="note"><b>Trainer tip</b> Start with <b>10–20 realistic queries</b>. That's enough to show where an agent struggles, and you reuse and grow the same dataset for every future version. Always validate your JSONL first: <span class="chip">python -c "import json;[json.loads(l) for l in open('invoice-tests.jsonl')]"</span></div>
+    </section>
+
+    <!-- 05 -->
+    <section id="s5">
+      <div class="sh"><span class="tag">05</span><h2>Run the evaluation (portal)</h2></div>
+      <ol class="steps">
+        <li><b>Open the Create wizard.</b> Left nav → <b>Evaluation → Create</b>, or go to your agent → <b>Evaluation</b> tab → <b>Create</b>. Choose the <b>Agent</b> option and continue.</li>
+        <li><b>Pick the data source.</b> Select <b>Existing dataset → Upload new dataset</b>, name it (e.g. <span class="chip">invoice-tests</span>), and upload your JSONL/CSV. Or choose synthetic generation, or simulate conversations.</li>
+        <li><b>Map the fields.</b> Confirm the column mapping — required fields are marked with an asterisk. If you included ground truth, map <span class="chip">{{item.ground_truth}}</span> to <b>Ground truth</b>. Unassigned required fields cause that evaluator to fail.</li>
+        <li><b>Choose evaluators.</b> The portal preselects recommended ones; add what you need — e.g. <b>Task Adherence</b>, <b>Tool Call Accuracy</b>, <b>Groundedness</b>, <b>Relevance</b>, and the safety set. Pick the GPT judge deployment when prompted.</li>
+        <li><b>Name the run and Submit.</b> It takes a few minutes; status shows <b>Running</b> and updates when complete.</li>
+      </ol>
+    </section>
+
+    <!-- 06 -->
+    <section id="s6">
+      <div class="sh"><span class="tag">06</span><h2>Read the results</h2></div>
+      <ul class="tick">
+        <li>Open <b>Evaluation</b> in the left pane and select your run. You'll see <b>pass/fail counts per evaluator</b> across the dataset.</li>
+        <li>Select the run name for <b>row-level results</b>: each row shows the query, the response, the ground truth, the evaluator score, and the <b>reason</b> for the score.</li>
+        <li><b>Compare versions.</b> Select two or more runs and choose <b>Compare</b> for a side-by-side view; the comparison uses statistical t-testing so small differences are trustworthy.</li>
+      </ul>
+      <div class="note warn"><b>Look for patterns, not single rows</b> One failing row is noise. If groundedness fails consistently on one document type, that's a retrieval problem. If tool-call accuracy fails on a certain phrasing, that's a prompt problem. The per-row reasoning is what surfaces these patterns.</div>
+    </section>
+
+    <!-- 07 -->
+    <section id="s7" class="blue">
+      <div class="sh"><span class="tag b">07</span><h2>Evaluate from code (SDK) — for CI/CD</h2></div>
+      <p>Once you want a repeatable release gate, drive the same evaluation from Python with the <b>Azure AI Evaluation SDK</b>.</p>
+      <div class="code"><div class="hd">bash <button class="copy">Copy</button></div><pre><code>pip install azure-ai-evaluation azure-ai-projects azure-identity</code></pre></div>
+
+      <h3>Score a dataset with evaluators</h3>
+      <div class="code"><div class="hd">evaluate_local.py <button class="copy">Copy</button></div><pre><code><span class="kw">from</span> azure.ai.evaluation <span class="kw">import</span> evaluate, RelevanceEvaluator, GroundednessEvaluator
+
+judge = {<span class="st">"azure_endpoint"</span>: <span class="st">"..."</span>, <span class="st">"azure_deployment"</span>: <span class="st">"gpt-4o-mini"</span>}
+
+result = evaluate(
+    data=<span class="st">"invoice-tests-graded.jsonl"</span>,
+    evaluators={
+        <span class="st">"relevance"</span>:    RelevanceEvaluator(judge),
+        <span class="st">"groundedness"</span>: GroundednessEvaluator(judge),
+    },
+    evaluator_config={<span class="st">"default"</span>: {<span class="st">"column_mapping"</span>: {
+        <span class="st">"query"</span>:        <span class="st">"${data.query}"</span>,
+        <span class="st">"ground_truth"</span>: <span class="st">"${data.ground_truth}"</span>,
+        <span class="st">"response"</span>:     <span class="st">"${outputs.response}"</span>,
+    }}},
+    azure_ai_project=project,                <span class="cm"># track results in Foundry</span>
+    output_path=<span class="st">"./results.json"</span>,
+)
+<span class="fn">print</span>(result[<span class="st">"metrics"</span>])</code></pre></div>
+
+      <h3>Cloud run against your agent target</h3>
+      <p>Upload your test dataset, then have Foundry send each query to your agent and score the generated responses.</p>
+      <div class="code"><div class="hd">evaluate_cloud.py <button class="copy">Copy</button></div><pre><code>dataset = project_client.datasets.upload_file(
+    name=<span class="st">"invoice-test-queries"</span>, version=<span class="st">"1"</span>,
+    file_path=<span class="st">"./invoice-tests.jsonl"</span>,
+)
+
+run = client.evals.runs.create(
+    eval_id=evaluation.id,
+    data_source={
+        <span class="st">"type"</span>: <span class="st">"azure_ai_target_completions"</span>,
+        <span class="st">"source"</span>: {<span class="st">"type"</span>: <span class="st">"file_id"</span>, <span class="st">"id"</span>: dataset.id},
+        <span class="st">"input_messages"</span>: {<span class="st">"type"</span>: <span class="st">"template"</span>, <span class="st">"template"</span>: [
+            {<span class="st">"type"</span>: <span class="st">"message"</span>, <span class="st">"role"</span>: <span class="st">"user"</span>,
+             <span class="st">"content"</span>: {<span class="st">"type"</span>: <span class="st">"input_text"</span>, <span class="st">"text"</span>: <span class="st">"{{item.query}}"</span>}}]},
+        <span class="st">"target"</span>: {<span class="st">"type"</span>: <span class="st">"azure_ai_agent"</span>, <span class="st">"name"</span>: <span class="st">"KnowledgeTest"</span>},
+    },
+)
+<span class="fn">print</span>(<span class="st">"Run:"</span>, run.id)</code></pre></div>
+      <div class="note blue"><b>Gate the pipeline</b> Read a metric back and fail the build if it regresses, e.g. <span class="chip">assert result["metrics"]["groundedness.gpt_groundedness"] &gt;= 4.0</span>. That turns evaluation into an automatic "don't ship" switch.</div>
+    </section>
+
+    <!-- 08 -->
+    <section id="s8">
+      <div class="sh"><span class="tag">08</span><h2>Troubleshooting</h2></div>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Symptom</th><th>Cause &amp; fix</th></tr></thead>
+        <tbody>
+          <tr><td>Everything scores ~100%</td><td>No <b>ground_truth</b> in the dataset, so there's nothing to be wrong against. Add expected answers.</td></tr>
+          <tr><td>Evaluator shows "field unassigned" / fails</td><td>A required field wasn't mapped. Assign it on the Field mapping page (<span class="chip">{{item.ground_truth}}</span> etc.).</td></tr>
+          <tr><td>Quality evaluators won't run</td><td>No Azure OpenAI GPT (judge) deployment connected. Add one; safety-only runs don't need it.</td></tr>
+          <tr><td>403 / can't create evaluation</td><td>Missing <b>Foundry User</b> role on the project.</td></tr>
+          <tr><td>Agent evaluation option missing</td><td>It's public preview — ensure you're on the new Foundry portal and your project supports it.</td></tr>
+          <tr><td>JSONL rejected</td><td>Malformed lines. Validate with the one-liner in section 04 before uploading.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- 09 -->
+    <section id="s9">
+      <div class="sh"><span class="tag">09</span><h2>Sources &amp; further reading</h2></div>
+      <ul class="tick">
+        <li><a class="inl" href="https://learn.microsoft.com/en-us/azure/foundry/observability/how-to/evaluate-agent" target="_blank">Evaluate your AI agents</a></li>
+        <li><a class="inl" href="https://learn.microsoft.com/en-us/azure/foundry/how-to/evaluate-generative-ai-app" target="_blank">Run evaluations from the Foundry portal</a></li>
+        <li><a class="inl" href="https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/cloud-evaluation" target="_blank">Cloud evaluation with the Foundry SDK</a></li>
+        <li><a class="inl" href="https://learn.microsoft.com/en-us/azure/foundry/observability/how-to/evaluation-dataset-synthetic" target="_blank">Generate a synthetic evaluation dataset</a></li>
+        <li><a class="inl" href="https://learn.microsoft.com/en-us/azure/foundry/how-to/evaluate-results" target="_blank">See evaluation results</a></li>
+      </ul>
+      <footer>Prepared as a training handout · Microsoft Foundry (formerly Azure AI Foundry). Portal layouts, preview flags, and RBAC role names change often — verify against the linked Microsoft Learn pages before delivery.</footer>
+    </section>
+  </main>
+</div>
+<script>
+  (function(){const r=document.documentElement,b=document.getElementById('themeBtn');
+    try{const s=localStorage.getItem('fe-theme');if(s)r.setAttribute('data-theme',s);}catch(e){}
+    b.onclick=()=>{const n=r.getAttribute('data-theme')==='dark'?'light':'dark';r.setAttribute('data-theme',n);try{localStorage.setItem('fe-theme',n);}catch(e){}};})();
+  document.querySelectorAll('.code .copy').forEach(b=>{b.onclick=()=>{const t=b.closest('.code').querySelector('code').innerText;
+    navigator.clipboard.writeText(t).then(()=>{const o=b.textContent;b.textContent='Copied ✓';setTimeout(()=>b.textContent=o,1300);});};});
+  const links=[...document.querySelectorAll('#toc a')];
+  const obs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting)links.forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+e.target.id));});},{rootMargin:'-45% 0px -50% 0px'});
+  document.querySelectorAll('section[id]').forEach(s=>obs.observe(s));
+</script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Share a status Variable Between Foundry Agents</title>
+<style>
+  :root{
+    --bg:#0f1420;--panel:#161d2e;--panel2:#1e2740;--ink:#e8edf7;--muted:#9fb0cc;
+    --brand:#4aa3ff;--brand2:#7c5cff;--ok:#37d399;--warn:#ffce54;--line:#28324a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.6}
+  .wrap{max-width:680px;margin:0 auto;padding:24px 18px 60px}
+  header{background:linear-gradient(90deg,var(--brand),var(--brand2));color:#fff;
+    padding:18px 22px;border-radius:16px;margin-bottom:18px}
+  header h1{margin:0;font-size:1.25rem}
+  .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0 22px;justify-content:center}
+  .node{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-weight:600;font-size:.85rem}
+  .node.var{border-color:var(--ok);color:var(--ok)}
+  .arrow{color:var(--muted);font-size:1.2rem}
+  .step{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:13px 0;
+    display:flex;gap:14px;align-items:flex-start}
+  .n{flex:0 0 auto;width:36px;height:36px;border-radius:10px;background:var(--brand);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.05rem}
+  .step h3{margin:.15rem 0 .45rem;font-size:1.05rem}
+  .step p{margin:.25rem 0}
+  code{background:#0b1020;color:#cfe0ff;padding:2px 7px;border-radius:6px;font-family:Consolas,'Courier New',monospace;font-size:.85em}
+  pre{background:#0b1020;color:#e6edf3;border:1px solid #1b2440;border-radius:10px;padding:12px 14px;overflow:auto;font-size:.82rem;margin:8px 0;position:relative}
+  .copy{position:absolute;top:8px;right:8px;background:#22304d;color:#cfe0ff;border:none;border-radius:7px;padding:3px 10px;font-size:.72rem;cursor:pointer}
+  .copy:hover{background:#2f4370}
+  .box{border-left:4px solid var(--ok);background:var(--panel2);padding:12px 15px;border-radius:0 12px 12px 0;margin:16px 0}
+  .box b{color:var(--ink)}
+  footer{color:var(--muted);font-size:.78rem;text-align:center;margin-top:26px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>⚡ Share one variable: <code style="color:#fff">status</code></h1>
+  </header>
+
+  <div class="flow">
+    <span class="node">🧠 Planner</span>
+    <span class="arrow">→</span>
+    <span class="node var">📦 Local.status</span>
+    <span class="arrow">→</span>
+    <span class="node">🔎 Extractor</span>
+  </div>
+
+  <div class="box">
+    <b>Idea:</b> Planner sets <code>status</code> → Extractor reads <code>Local.status</code>.
+  </div>
+
+  <div class="step">
+    <div class="n">1</div>
+    <div>
+      <h3>Open the workflow</h3>
+      <p>Foundry portal → <b>Build</b> → <b>Workflows</b> → open your workflow.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">2</div>
+    <div>
+      <h3>Planner outputs <code>status</code></h3>
+      <p>Click the <b>Planner</b> node → set its output to this JSON schema → name it <code>status</code>.</p>
+      <pre><button class="copy">Copy</button><code>{
+  "type": "object",
+  "properties": {
+    "status": { "type": "string" }
+  }
+}</code></pre>
+      <p>Now it's available as <code>Local.status</code>.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">3</div>
+    <div>
+      <h3>Extractor reads <code>status</code></h3>
+      <p>Click the <b>Extractor</b> node → in its prompt/input, use:</p>
+      <pre><button class="copy">Copy</button><code>Current status: Local.status</code></pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="n">4</div>
+    <div>
+      <h3>Save &amp; run</h3>
+      <p>Click <b>Save</b> (no autosave) → <b>Run Workflow</b> → check that <code>Local.status</code> shows the Planner's value.</p>
+    </div>
+  </div>
+
+  <footer>Keep the <code>Local.</code> prefix. Save creates a version. Foundry Workflows visual designer.</footer>
+</div>
+
+<script>
+document.querySelectorAll('.copy').forEach(b=>{
+  b.onclick=()=>{const t=b.parentElement.innerText.replace(/^Copy\n/,'');navigator.clipboard.writeText(t);b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1200);};
+});
+</script>
+</body>
+</html>

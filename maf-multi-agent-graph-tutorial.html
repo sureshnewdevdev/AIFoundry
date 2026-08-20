@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Microsoft Agent Framework — Production Multi-Agent Graphs</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#0b0e14; --bg2:#0f131c; --panel:#141a26; --panel2:#182031;
+    --ink:#e7ecf6; --soft:#9aa6be; --faint:#6b7793;
+    --line:#232c3d; --line2:#2f3a50;
+    --graph:#7c8cff; --graph-bg:#1a1e3a;
+    --safe:#2fd4bd;  --safe-bg:#0f2a29;
+    --test:#f2b45c;  --test-bg:#2c2011;
+    --ship:#ff7ea8;  --ship-bg:#301522;
+    --ok:#3ecf8e; --bad:#ff6b6b;
+    --code:#0a0e17; --codeink:#cdd8ee;
+    --radius:14px; --shadow:0 10px 34px rgba(0,0,0,.45);
+  }
+  html[data-theme="light"]{
+    --bg:#f5f7fb; --bg2:#eef1f7; --panel:#ffffff; --panel2:#f4f6fb;
+    --ink:#141a26; --soft:#4a5468; --faint:#818ba3;
+    --line:#e2e7f1; --line2:#d2d9e8;
+    --graph:#5346e0; --graph-bg:#eeecff;
+    --safe:#0e9384; --safe-bg:#e2f5f2;
+    --test:#b25f09; --test-bg:#fbeedd;
+    --ship:#c43d6b; --ship-bg:#fce8ef;
+    --code:#0f1420; --codeink:#d6dff0;
+    --shadow:0 8px 26px rgba(20,25,45,.08);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+
+  .wrap{display:grid;grid-template-columns:300px minmax(0,1fr);max-width:1300px;margin:0 auto}
+  aside{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;
+    padding:24px 18px 40px;border-right:1px solid var(--line);background:var(--bg2)}
+  main{padding:40px 46px 100px;min-width:0}
+
+  .brand{display:flex;gap:11px;align-items:center;margin-bottom:14px}
+  .brand .mk{width:38px;height:38px;border-radius:10px;flex:none;
+    background:conic-gradient(from 210deg,var(--graph),var(--safe),var(--test),var(--ship),var(--graph));
+    box-shadow:var(--shadow)}
+  .brand b{font-family:'Space Grotesk';font-size:15.5px;letter-spacing:-.01em;line-height:1.15}
+  .brand small{display:block;color:var(--faint);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;font-weight:600}
+
+  .prog{margin:14px 2px 18px}
+  .prog .bar{height:7px;border-radius:99px;background:var(--line);overflow:hidden}
+  .prog .fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--graph),var(--safe));transition:width .35s}
+  .prog .lab{font-size:11px;color:var(--faint);margin-top:6px;font-family:'JetBrains Mono'}
+
+  .toc a{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--soft);
+    padding:7px 10px;border-radius:8px;font-size:13.5px;border-left:2px solid transparent}
+  .toc a:hover{background:var(--panel);color:var(--ink)}
+  .toc a.active{background:var(--panel);color:var(--ink);border-left-color:var(--graph)}
+  .toc a .n{font-family:'JetBrains Mono';font-size:10.5px;color:var(--faint);width:16px;flex:none}
+  .toc a .dot{margin-left:auto;color:var(--ok);opacity:0;font-size:12px}
+  .toc a.done .dot{opacity:1}
+
+  .tbtn{margin-top:20px;display:inline-flex;gap:8px;align-items:center;cursor:pointer;
+    background:var(--panel);border:1px solid var(--line2);color:var(--soft);
+    padding:8px 12px;border-radius:99px;font-size:12.5px;font-weight:500}
+  .tbtn:hover{color:var(--ink)}
+
+  /* hero */
+  .eyebrow{font-family:'JetBrains Mono';font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--safe)}
+  h1{font-family:'Space Grotesk';font-weight:700;letter-spacing:-.025em;
+    font-size:clamp(28px,4.3vw,44px);line-height:1.06;margin:.32em 0 .3em}
+  .lede{font-size:17px;color:var(--soft);max-width:64ch}
+  .pillbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+  .pill{font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:99px}
+  .pill.g{color:var(--graph);background:var(--graph-bg)}
+  .pill.s{color:var(--safe);background:var(--safe-bg)}
+  .pill.t{color:var(--test);background:var(--test-bg)}
+  .pill.d{color:var(--ship);background:var(--ship-bg)}
+
+  .objectives{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 22px;margin:26px 0 8px}
+  .objectives h4{font-family:'Space Grotesk';margin:0 0 8px;font-size:13px;letter-spacing:.05em;
+    text-transform:uppercase;color:var(--faint)}
+  .objectives ul{margin:0;padding-left:0;list-style:none}
+  .objectives li{position:relative;padding:4px 0 4px 26px;font-size:14.5px;color:var(--soft)}
+  .objectives li::before{content:"→";position:absolute;left:4px;color:var(--graph)}
+
+  section{margin:46px 0;scroll-margin-top:20px}
+  .sec-head{display:flex;align-items:center;gap:13px;margin-bottom:6px}
+  h2{font-family:'Space Grotesk';font-weight:700;letter-spacing:-.02em;font-size:25px;margin:0}
+  .tag{font-family:'JetBrains Mono';font-size:12px;font-weight:600;padding:3px 9px;border-radius:7px;color:#08101c}
+  .tag.g{background:var(--graph)} .tag.s{background:var(--safe)} .tag.t{background:var(--test)} .tag.d{background:var(--ship)}
+  h3{font-family:'Space Grotesk';font-weight:600;font-size:18px;margin:28px 0 8px}
+  p{margin:0 0 14px} b{font-weight:600}
+  a.inl{color:var(--graph);text-decoration:none;border-bottom:1px solid var(--line2)}
+
+  ul.tick{list-style:none;padding:0;margin:14px 0}
+  ul.tick li{position:relative;padding:5px 0 5px 26px}
+  ul.tick li::before{content:"▸";position:absolute;left:4px;color:var(--safe);top:5px}
+
+  .markbtn{margin-top:14px;display:inline-flex;gap:8px;align-items:center;cursor:pointer;
+    background:transparent;border:1px dashed var(--line2);color:var(--soft);
+    padding:8px 14px;border-radius:10px;font-size:13px;font-weight:500;font-family:'Inter'}
+  .markbtn:hover{border-color:var(--graph);color:var(--ink)}
+  .markbtn.done{border-style:solid;border-color:var(--ok);color:var(--ok)}
+
+  /* code */
+  .code{position:relative;background:var(--code);border:1px solid var(--line);border-radius:12px;margin:16px 0;overflow:hidden}
+  .code .hd{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;
+    border-bottom:1px solid var(--line);font-family:'JetBrains Mono';font-size:11.5px;color:var(--faint)}
+  .code pre{margin:0;padding:16px 18px;overflow-x:auto}
+  .code code{font-family:'JetBrains Mono';font-size:12.8px;color:var(--codeink);line-height:1.72;white-space:pre}
+  .copy{cursor:pointer;background:transparent;border:1px solid var(--line2);color:var(--faint);
+    font-family:'JetBrains Mono';font-size:11px;padding:3px 9px;border-radius:6px}
+  .copy:hover{color:var(--ink);border-color:var(--faint)}
+  .kw{color:#ff9ec7} .fn{color:#8fd0ff} .st{color:#a9e6a0} .cm{color:#5f6b85;font-style:italic} .nu{color:#f2b45c}
+
+  .note{border:1px solid var(--line);border-left:4px solid var(--graph);background:var(--panel);
+    border-radius:10px;padding:14px 18px;margin:18px 0;font-size:14.5px}
+  .note.s{border-left-color:var(--safe)} .note.t{border-left-color:var(--test)} .note.d{border-left-color:var(--ship)}
+  .note b{font-family:'Space Grotesk';display:block;margin-bottom:3px;font-size:12.5px;letter-spacing:.02em}
+  .note b{color:var(--graph)} .note.s b{color:var(--safe)} .note.t b{color:var(--test)} .note.d b{color:var(--ship)}
+
+  .tblwrap{overflow-x:auto;margin:18px 0;border:1px solid var(--line);border-radius:12px}
+  table{border-collapse:collapse;width:100%;font-size:13.7px;min-width:540px}
+  th,td{text-align:left;padding:11px 15px;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{background:var(--panel2);font-family:'Space Grotesk';font-weight:600;font-size:12.5px;color:var(--soft)}
+  tbody tr:last-child td{border-bottom:none}
+  .chip{display:inline-block;font-family:'JetBrains Mono';font-size:10.5px;padding:2px 7px;border-radius:5px;background:var(--graph-bg);color:var(--graph)}
+
+  /* graph diagram */
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:18px 0;padding:18px;
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+  .node{font-family:'JetBrains Mono';font-size:12px;font-weight:600;padding:9px 13px;border-radius:9px;
+    border:1px solid var(--line2);background:var(--panel2);white-space:nowrap}
+  .node.g{color:var(--graph);border-color:var(--graph)} .node.s{color:var(--safe);border-color:var(--safe)}
+  .node.h{color:var(--ship);border-color:var(--ship)}
+  .arw{color:var(--faint);font-family:'JetBrains Mono'}
+
+  /* quiz + exam */
+  .quiz{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;margin:18px 0}
+  .q{margin:0 0 20px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+  .q:last-of-type{border-bottom:none}
+  .q .qt{font-weight:600;margin-bottom:10px}
+  .q .qt .qn{font-family:'JetBrains Mono';color:var(--graph);margin-right:8px}
+  .opt{display:block;padding:9px 13px;border:1px solid var(--line2);border-radius:9px;margin:6px 0;cursor:pointer;
+    font-size:14px;color:var(--soft);transition:.15s}
+  .opt:hover{border-color:var(--graph);color:var(--ink)}
+  .opt input{margin-right:9px;accent-color:var(--graph)}
+  .opt.correct{border-color:var(--ok);background:var(--safe-bg);color:var(--ink)}
+  .opt.wrong{border-color:var(--bad);background:var(--ship-bg);color:var(--ink)}
+  .exp{font-size:13px;color:var(--faint);margin-top:8px;padding-left:4px;display:none}
+  .exp.show{display:block}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px}
+  .btn{cursor:pointer;font-family:'Space Grotesk';font-weight:600;font-size:14px;border:none;
+    padding:10px 20px;border-radius:10px;background:var(--graph);color:#0a0e17}
+  .btn:hover{filter:brightness(1.08)}
+  .btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--soft)}
+  .score{font-family:'JetBrains Mono';font-size:14px;font-weight:600}
+  .timer{font-family:'JetBrains Mono';font-weight:700;font-size:16px;padding:6px 12px;border-radius:8px;
+    background:var(--test-bg);color:var(--test)}
+  .timer.warn{background:var(--ship-bg);color:var(--ship)}
+
+  details.iv{background:var(--panel);border:1px solid var(--line);border-radius:11px;margin:9px 0;padding:2px 4px}
+  details.iv summary{cursor:pointer;padding:13px 16px;font-weight:600;font-size:14.5px;list-style:none;
+    display:flex;justify-content:space-between;align-items:center;gap:10px}
+  details.iv summary::-webkit-details-marker{display:none}
+  details.iv summary::after{content:"+";font-family:'JetBrains Mono';color:var(--graph);font-size:18px}
+  details.iv[open] summary::after{content:"–"}
+  details.iv .a{padding:0 16px 15px;color:var(--soft);font-size:14px}
+
+  footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--line);color:var(--faint);font-size:13px}
+
+  @media(max-width:940px){
+    .wrap{grid-template-columns:1fr}
+    aside{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line)}
+    .toc{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+    main{padding:28px 20px 70px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside>
+    <div class="brand">
+      <div class="mk"></div>
+      <div><b>Agent Framework</b><small>Production multi-agent lab</small></div>
+    </div>
+    <div class="prog">
+      <div class="bar"><div class="fill" id="fill"></div></div>
+      <div class="lab" id="progLab">0 / 5 sections complete</div>
+    </div>
+    <nav class="toc" id="toc">
+      <a href="#s0"><span class="n">00</span>Overview &amp; setup<span class="dot">✓</span></a>
+      <a href="#s1"><span class="n">01</span>Assemble the graph<span class="dot">✓</span></a>
+      <a href="#s2"><span class="n">02</span>Safety, PII, escalation<span class="dot">✓</span></a>
+      <a href="#s3"><span class="n">03</span>Test, red-team, trace<span class="dot">✓</span></a>
+      <a href="#s4"><span class="n">04</span>Automated deployment<span class="dot">✓</span></a>
+      <a href="#quiz"><span class="n">Q</span>Knowledge check</a>
+      <a href="#exam"><span class="n">E</span>Timed exam</a>
+      <a href="#iv"><span class="n">I</span>Interview Q&amp;A</a>
+      <a href="#cheat"><span class="n">C</span>Cheat sheet</a>
+    </nav>
+    <div class="tbtn" id="themeBtn">🌗 <span>Theme</span></div>
+  </aside>
+
+  <main>
+    <div class="eyebrow">Classroom tutorial · Microsoft Agent Framework 1.0</div>
+    <h1>Program, secure, test &amp; ship<br>a multi-agent graph</h1>
+    <p class="lede">Build a directed-graph multi-agent workflow with the Microsoft Agent Framework SDK, wire in safety guardrails, PII redaction and human escalation, then add automated testing, red-teaming, tracing, and hands-off production deployment.</p>
+    <div class="pillbar">
+      <span class="pill g">Graph orchestration</span>
+      <span class="pill s">Safety &amp; PII</span>
+      <span class="pill t">Test &amp; red-team</span>
+      <span class="pill d">Deploy</span>
+    </div>
+
+    <div class="objectives">
+      <h4>By the end you can</h4>
+      <ul>
+        <li>Compose executors and agents into a directed workflow graph with edges, conditions, and fan-in</li>
+        <li>Add guardrail + PII-redaction middleware and a human-approval escalation node</li>
+        <li>Run automated evaluations and a PyRIT-based red-team scan, and stream OpenTelemetry traces to Foundry</li>
+        <li>Gate a CI/CD pipeline on those results and deploy to Foundry hosted agents</li>
+      </ul>
+    </div>
+
+    <div class="note">
+      <b>SDK is 1.0 and moving fast</b>
+      Microsoft Agent Framework (MAF) reached 1.0 GA in April 2026 and ships new features at every Build. The concepts here are stable, but treat exact import paths and method names as representative — confirm against the official samples at github.com/microsoft/agent-framework before shipping.
+    </div>
+
+    <!-- ===== SECTION 0 ===== -->
+    <section id="s0">
+      <div class="sec-head"><span class="tag g">00</span><h2>Overview &amp; setup</h2></div>
+      <p><b>Microsoft Agent Framework</b> is the open-source SDK and runtime for building agents and multi-agent workflows, with the same concepts across Python and .NET. It is the direct successor to Semantic Kernel and AutoGen, folding AutoGen's simple agent abstractions into Semantic Kernel's enterprise features (typed state, middleware, telemetry) and adding a graph-based workflow engine.</p>
+
+      <h3>Two layers you'll use together</h3>
+      <ul class="tick">
+        <li><b>Agents</b> — stateful, multi-turn units: a model + instructions + tools. An agent keeps invoking tools until it can return a final answer.</li>
+        <li><b>Workflows</b> — a typed, directed graph that routes data along edges and activates <b>executors</b> when their inputs are ready. This is where you assemble the multi-agent system deterministically. An agent can itself be an executor inside the graph.</li>
+      </ul>
+
+      <h3>The graph primitives</h3>
+      <ul class="tick">
+        <li><b>Executor</b> — a single-responsibility node (wrap an agent, a function, or a sub-workflow).</li>
+        <li><b>Edge</b> — a routing rule connecting executors; edges can carry conditions for dynamic routing.</li>
+        <li><b>Event</b> — the observable signals the runtime streams as it runs (great for tracing).</li>
+        <li><b>Superstep model</b> — execution runs in Pregel-style supersteps: every executor with pending input runs in parallel, then a synchronization barrier waits for all to finish before advancing.</li>
+      </ul>
+
+      <p>For the 90% case there are five ready-made orchestration builders on top of these primitives — <b>Sequential, Concurrent, Handoff, Group&nbsp;Chat, and Magentic</b>. This tutorial goes one level lower and builds the graph explicitly with <span class="chip">WorkflowBuilder</span>, because that's what gives you the deterministic, auditable path enterprises need.</p>
+
+      <h3>Install</h3>
+      <div class="code"><div class="hd">bash <button class="copy">Copy</button></div><pre><code><span class="cm"># One package pulls in the sub-packages</span>
+pip install agent-framework
+pip install azure-identity azure-ai-evaluation
+
+<span class="cm"># Authenticate locally (managed identity is used in production)</span>
+az login</code></pre></div>
+
+      <div class="note s"><b>Mental model to teach first</b>
+      The LLM reasons <i>inside</i> a node; it does not control the overall path. The <b>developer</b> owns the topology and the guardrails; the <b>agents</b> own the routing decisions they're allowed to make. That separation is what makes MAF workflows testable and governable.</div>
+
+      <button class="markbtn" data-sec="s0">Mark section complete</button>
+    </section>
+
+    <!-- ===== SECTION 1 ===== -->
+    <section id="s1">
+      <div class="sec-head"><span class="tag g">01</span><h2>Program &amp; assemble the graph</h2></div>
+      <p>We'll build a settlement-reconciliation flow: a <b>Planner</b> routes work, an <b>Ingestion</b> node loads the raw statements, an <b>Extractor</b> pulls structured fields, and an <b>Executor/Reconciler</b> does the matching. A conditional edge escalates high-risk cases to a human (covered in section 2).</p>
+
+      <div class="flow">
+        <span class="node g">Planner</span><span class="arw">──▶</span>
+        <span class="node g">Ingestion</span><span class="arw">──▶</span>
+        <span class="node g">Extractor</span><span class="arw">──▶</span>
+        <span class="node g">Reconciler</span><span class="arw">──▶</span>
+        <span class="node h">Human&nbsp;approval*</span>
+      </div>
+
+      <h3>Step 1 — a chat client and some agents</h3>
+      <div class="code"><div class="hd">graph.py <button class="copy">Copy</button></div><pre><code><span class="kw">import</span> asyncio
+<span class="kw">from</span> agent_framework <span class="kw">import</span> WorkflowBuilder
+<span class="kw">from</span> agent_framework.azure <span class="kw">import</span> AzureAIAgentClient
+<span class="kw">from</span> azure.identity <span class="kw">import</span> AzureCliCredential
+
+chat = AzureAIAgentClient(async_credential=AzureCliCredential())
+
+planner = chat.create_agent(
+    name=<span class="st">"Planner"</span>,
+    instructions=<span class="st">"Classify the incoming settlement batch and decide the route."</span>,
+)
+ingestion = chat.create_agent(
+    name=<span class="st">"Ingestion"</span>,
+    instructions=<span class="st">"Load and normalise the raw settlement statement text."</span>,
+)
+extractor = chat.create_agent(
+    name=<span class="st">"Extractor"</span>,
+    instructions=<span class="st">"Extract trade id, amount, currency, and counterparty as JSON."</span>,
+)
+reconciler = chat.create_agent(
+    name=<span class="st">"Reconciler"</span>,
+    instructions=<span class="st">"Match extracted records against the ledger; flag breaks."</span>,
+)</code></pre></div>
+
+      <h3>Step 2 — wire the executors into a directed graph</h3>
+      <p>The <span class="chip">WorkflowBuilder</span> sets a start executor and connects nodes with <span class="chip">add_edge</span>. Agents are used directly as executors. <span class="chip">.build()</span> returns an immutable, validated <span class="chip">Workflow</span>.</p>
+      <div class="code"><div class="hd">graph.py (continued) <button class="copy">Copy</button></div><pre><code>workflow = (
+    WorkflowBuilder()
+    .set_start_executor(planner)
+    .add_edge(planner, ingestion)
+    .add_edge(ingestion, extractor)
+    .add_edge(extractor, reconciler)
+    .build()
+)</code></pre></div>
+
+      <h3>Step 3 — run it and stream events</h3>
+      <div class="code"><div class="hd">graph.py (continued) <button class="copy">Copy</button></div><pre><code><span class="kw">async def</span> <span class="fn">main</span>():
+    batch = <span class="st">"Settlement batch #4471 — 3 statements attached..."</span>
+    <span class="kw">async for</span> event <span class="kw">in</span> workflow.run_stream(batch):
+        <span class="kw">if</span> event.type == <span class="st">"output"</span>:
+            <span class="fn">print</span>(event.data)
+
+asyncio.run(main())</code></pre></div>
+
+      <h3>Conditional routing &amp; fan-in</h3>
+      <p>Edges can carry conditions, and a switch-case group scales better than many boolean edges. Use a fan-in to wait for several branches before an aggregator runs.</p>
+      <div class="code"><div class="hd">routing.py <button class="copy">Copy</button></div><pre><code><span class="kw">from</span> agent_framework <span class="kw">import</span> Case, Default
+
+<span class="cm"># Conditional edge: only high-value breaks go to the human path</span>
+builder.add_edge(reconciler, human_review,
+                 condition=<span class="kw">lambda</span> r: r.amount &gt;= <span class="nu">1_000_000</span>)
+
+<span class="cm"># Switch-case group with a default safety net</span>
+builder.add_switch_case_edge_group(
+    planner,
+    [
+        Case(condition=<span class="kw">lambda</span> x: x.kind == <span class="st">"equities"</span>, target=equities_flow),
+        Case(condition=<span class="kw">lambda</span> x: x.kind == <span class="st">"fx"</span>,       target=fx_flow),
+        Default(target=manual_triage),
+    ],
+)
+
+<span class="cm"># Fan-in: aggregate parallel workers before reporting</span>
+builder.add_fan_in_edges([worker_a, worker_b, worker_c], aggregator)</code></pre></div>
+
+      <div class="note"><b>Superstep gotcha to warn students about</b>
+      Within a fan-out, the graph won't advance to the next superstep until <i>every</i> triggered executor in the current step finishes. If one branch is a long chain and another is a single slow node, the chain waits. For truly independent parallel paths, consolidate sequential steps into one executor.</div>
+
+      <button class="markbtn" data-sec="s1">Mark section complete</button>
+    </section>
+
+    <!-- ===== SECTION 2 ===== -->
+    <section id="s2">
+      <div class="sec-head"><span class="tag s">02</span><h2>Safety rules, PII redaction &amp; human escalation</h2></div>
+      <p>MAF gives you three complementary hooks: <b>middleware</b> (intercept every request/response), <b>request-info / approval executors</b> (pause the graph for a human), and platform <b>guardrails</b> (Azure AI Content Safety, Foundry Control Plane).</p>
+
+      <h3>Guardrail + PII-redaction middleware</h3>
+      <p>Middleware wraps agent or function calls so you can inspect and rewrite messages before and after the model runs. This is the natural home for embedding safety rules and stripping PII from outputs.</p>
+      <div class="code"><div class="hd">middleware.py <button class="copy">Copy</button></div><pre><code><span class="kw">import</span> re
+
+PII = [
+    (re.compile(<span class="st">r"\b\d{16}\b"</span>),               <span class="st">"[CARD]"</span>),
+    (re.compile(<span class="st">r"\b[\w.]+@[\w.]+\.\w+\b"</span>),    <span class="st">"[EMAIL]"</span>),
+    (re.compile(<span class="st">r"\b\d{3}-\d{2}-\d{4}\b"</span>),      <span class="st">"[SSN]"</span>),
+]
+
+<span class="kw">def</span> <span class="fn">redact</span>(text: str) -&gt; str:
+    <span class="kw">for</span> pattern, tag <span class="kw">in</span> PII:
+        text = pattern.sub(tag, text)
+    <span class="kw">return</span> text
+
+<span class="kw">async def</span> <span class="fn">safety_middleware</span>(context, next):
+    <span class="cm"># --- pre: block disallowed intents before the model runs ---</span>
+    user_text = context.messages[-<span class="nu">1</span>].text
+    <span class="kw">if</span> <span class="st">"wire funds"</span> <span class="kw">in</span> user_text.lower():
+        context.result = <span class="st">"Blocked: fund-transfer requests require the approval path."</span>
+        <span class="kw">return</span>
+
+    <span class="kw">await</span> next(context)          <span class="cm"># run the agent</span>
+
+    <span class="cm"># --- post: redact PII from whatever the agent produced ---</span>
+    <span class="kw">if</span> context.result <span class="kw">and</span> context.result.text:
+        context.result.text = <span class="fn">redact</span>(context.result.text)
+
+<span class="cm"># Attach when creating the agent</span>
+extractor = chat.create_agent(
+    name=<span class="st">"Extractor"</span>,
+    instructions=<span class="st">"..."</span>,
+    middleware=[safety_middleware],
+)</code></pre></div>
+
+      <h3>Human escalation (human-in-the-loop)</h3>
+      <p>MAF workflows support pausing for human input: a node emits a <b>request-info</b> event, the workflow checkpoints and suspends, and it resumes when your app supplies the human's decision. Wire it behind the conditional edge from section 1 so only high-risk cases stop for approval.</p>
+      <div class="code"><div class="hd">escalation.py <button class="copy">Copy</button></div><pre><code><span class="kw">from</span> agent_framework <span class="kw">import</span> RequestInfoExecutor, RequestInfoEvent
+
+approval = RequestInfoExecutor(name=<span class="st">"HumanApproval"</span>)
+
+builder.add_edge(reconciler, approval,
+                 condition=<span class="kw">lambda</span> r: r.risk == <span class="st">"high"</span>)
+builder.add_edge(approval, reconciler)   <span class="cm"># resume after decision</span>
+
+<span class="kw">async for</span> event <span class="kw">in</span> workflow.run_stream(batch):
+    <span class="kw">if</span> <span class="fn">isinstance</span>(event, RequestInfoEvent):
+        <span class="cm"># Surface to a reviewer, then resume with their answer</span>
+        decision = <span class="kw">await</span> ask_human(event.data)
+        <span class="kw">await</span> workflow.send_response(event.request_id, decision)</code></pre></div>
+
+      <div class="note t"><b>Never log PII in production</b>
+      MAF logging/telemetry only includes message content when you explicitly enable it. At Trace log level, or with <span class="chip">ENABLE_SENSITIVE_DATA=true</span>, the full chat messages (including PII) are captured. Keep both <b>off</b> in production — this is a common accidental data-leak path.</div>
+
+      <ul class="tick">
+        <li>Layer defenses: middleware in code, plus <b>Azure AI Content Safety</b> filters on the model, plus <b>Foundry Control Plane</b> guardrails to govern a whole fleet of agents.</li>
+        <li>Treat serialized agent sessions as sensitive — restoring one from an untrusted source is accepting untrusted input.</li>
+        <li>For deterministic anti-exfiltration, look at <b>FIDES</b> information-flow-control middleware that enforces policy before sensitive tools run.</li>
+      </ul>
+
+      <button class="markbtn" data-sec="s2">Mark section complete</button>
+    </section>
+
+    <!-- ===== SECTION 3 ===== -->
+    <section id="s3">
+      <div class="sec-head"><span class="tag t">03</span><h2>Automated testing, red-teaming &amp; tracing</h2></div>
+
+      <h3>Automated evaluation (the test suite)</h3>
+      <p>Use the <b>Azure AI Evaluation SDK</b> to score your graph against a labelled dataset — quality, groundedness, and agent-specific metrics like intent resolution and tool-call accuracy. Run it in CI so a regression fails the build.</p>
+      <div class="code"><div class="hd">evaluate.py <button class="copy">Copy</button></div><pre><code><span class="kw">from</span> azure.ai.evaluation <span class="kw">import</span> evaluate, GroundednessEvaluator, RelevanceEvaluator
+
+results = evaluate(
+    data=<span class="st">"testset.jsonl"</span>,                <span class="cm"># prompts + expected answers</span>
+    evaluators={
+        <span class="st">"groundedness"</span>: GroundednessEvaluator(model_config),
+        <span class="st">"relevance"</span>:    RelevanceEvaluator(model_config),
+    },
+)
+<span class="fn">print</span>(results[<span class="st">"metrics"</span>])
+<span class="kw">assert</span> results[<span class="st">"metrics"</span>][<span class="st">"groundedness.gpt_groundedness"</span>] &gt;= <span class="nu">4.0</span></code></pre></div>
+
+      <h3>Red-teaming (adversarial testing)</h3>
+      <p>The <b>AI Red Teaming Agent</b> uses Microsoft's open-source <b>PyRIT</b> to simulate attacks — including obfuscated prompts that slip past a model's built-in alignment — and scores each attack/response pair to produce an <b>Attack Success Rate (ASR)</b> and a scorecard by risk category.</p>
+      <div class="code"><div class="hd">redteam.py <button class="copy">Copy</button></div><pre><code><span class="kw">from</span> azure.ai.evaluation.red_team <span class="kw">import</span> RedTeam, RiskCategory, AttackStrategy
+
+red_team = RedTeam(
+    azure_ai_project=project,
+    credential=AzureCliCredential(),
+    risk_categories=[RiskCategory.SensitiveDataLeakage,   <span class="cm"># PII leaks</span>
+                     RiskCategory.ProhibitedActions,      <span class="cm"># unapproved actions</span>
+                     RiskCategory.HateUnfairness],
+    attack_strategies=[AttackStrategy.Base64, AttackStrategy.Flip],
+)
+
+scan = <span class="kw">await</span> red_team.scan(target=my_agent_callback)
+<span class="fn">print</span>(<span class="st">"Attack success rate:"</span>, scan.attack_success_rate)</code></pre></div>
+      <p>Red-team results log to Foundry so you can track them over time and gate a release on the scorecard. Best run with a human-in-the-loop confirming your prohibited-action taxonomy.</p>
+
+      <h3>Tracing (OpenTelemetry)</h3>
+      <p>MAF has built-in OpenTelemetry instrumentation. Point it at Azure Monitor Application Insights and you get one end-to-end timeline per task — every model call, tool invocation, and agent decision across the graph.</p>
+      <div class="code"><div class="hd">tracing.py <button class="copy">Copy</button></div><pre><code><span class="kw">from</span> agent_framework.observability <span class="kw">import</span> setup_observability
+
+setup_observability(
+    applicationinsights_connection_string=<span class="st">"&lt;APP_INSIGHTS_CONNECTION_STRING&gt;"</span>,
+)
+<span class="cm"># Env-var controls:</span>
+<span class="cm">#   ENABLE_INSTRUMENTATION=true    (default on)</span>
+<span class="cm">#   ENABLE_SENSITIVE_DATA=false    (keep OFF in prod)</span>
+<span class="cm">#   ENABLE_CONSOLE_EXPORTERS=true  (handy locally)</span></code></pre></div>
+
+      <div class="note t"><b>Local debugging</b>
+      For fast iteration, run the graph under the MAF DevUI / VS Code extension to watch executor timelines and inputs/outputs step by step before you ship traces to the cloud.</div>
+
+      <button class="markbtn" data-sec="s3">Mark section complete</button>
+    </section>
+
+    <!-- ===== SECTION 4 ===== -->
+    <section id="s4">
+      <div class="sec-head"><span class="tag d">04</span><h2>Automated production deployment</h2></div>
+      <p>Once the graph passes evals and the red-team scorecard, deploy to <b>Foundry hosted agents</b> — the framework adds hosting with only a couple of extra lines. On deploy, the agent gets its own Microsoft Entra identity, so every action is traceable and runs under scoped permissions.</p>
+
+      <div class="code"><div class="hd">deploy.py <button class="copy">Copy</button></div><pre><code><span class="cm"># Same workflow you built and tested — now hosted on Foundry</span>
+<span class="kw">from</span> agent_framework.azure <span class="kw">import</span> FoundryHostedAgent
+
+hosted = FoundryHostedAgent.from_workflow(workflow, name=<span class="st">"settlement-recon"</span>)
+<span class="kw">await</span> hosted.deploy(project=project)   <span class="cm"># scoped identity assigned automatically</span></code></pre></div>
+
+      <h3>Gate the pipeline (CI/CD)</h3>
+      <p>Make deployment hands-off but safe: only ship if evaluation thresholds and the red-team ASR pass. Foundry's observability integrates with CI/CD, auto-generated test datasets, and vulnerability detection.</p>
+      <div class="code"><div class="hd">.github/workflows/deploy.yml <button class="copy">Copy</button></div><pre><code>jobs:
+  ship:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install agent-framework azure-ai-evaluation
+      - run: python evaluate.py      <span class="cm"># fails build if metrics regress</span>
+      - run: python redteam.py       <span class="cm"># fails build if ASR too high</span>
+      - run: python deploy.py        <span class="cm"># only runs if the gates pass</span></code></pre></div>
+
+      <h3>After deployment — keep watching</h3>
+      <ul class="tick">
+        <li><b>Continuous evaluation</b> — score a sampled slice of live traffic for quality and safety.</li>
+        <li><b>Scheduled red teaming</b> — recurring adversarial probes against production on synthetic data.</li>
+        <li><b>Azure Monitor alerts</b> — page someone when outputs breach quality thresholds or produce harmful content; watch for drift and regressions.</li>
+        <li><b>Foundry Control Plane</b> — unified dashboards, scoped policies, guardrails, and bulk remediation across your whole agent fleet.</li>
+      </ul>
+
+      <div class="note d"><b>The lifecycle in one line</b>
+      Build the graph → add guardrails, PII redaction &amp; escalation → evaluate + red-team + trace → gate CI/CD → deploy to Foundry with a scoped identity → monitor, continuously evaluate, and re-red-team on a schedule.</div>
+
+      <button class="markbtn" data-sec="s4">Mark section complete</button>
+    </section>
+
+    <!-- ===== QUIZ ===== -->
+    <section id="quiz">
+      <div class="sec-head"><span class="tag g">Q</span><h2>Knowledge check</h2></div>
+      <p>Six questions. Pick an answer for each, then check your score. Your best result is saved on this device.</p>
+      <div class="quiz" id="quizBox"></div>
+      <div class="btnrow">
+        <button class="btn" id="quizCheck">Check answers</button>
+        <button class="btn ghost" id="quizReset">Reset</button>
+        <span class="score" id="quizScore"></span>
+      </div>
+    </section>
+
+    <!-- ===== EXAM ===== -->
+    <section id="exam">
+      <div class="sec-head"><span class="tag t">E</span><h2>Timed exam</h2></div>
+      <p>Eight questions, 6 minutes. The exam auto-submits when the timer hits zero. Best score is saved.</p>
+      <div class="btnrow" id="examControls">
+        <button class="btn" id="examStart">Start exam</button>
+        <span class="timer" id="examTimer" style="display:none">06:00</span>
+        <span class="score" id="examBest"></span>
+      </div>
+      <div class="quiz" id="examBox" style="display:none;margin-top:14px"></div>
+      <div class="btnrow" id="examSubmitRow" style="display:none">
+        <button class="btn" id="examSubmit">Submit exam</button>
+        <span class="score" id="examScore"></span>
+      </div>
+    </section>
+
+    <!-- ===== INTERVIEW ===== -->
+    <section id="iv">
+      <div class="sec-head"><span class="tag s">I</span><h2>Interview Q&amp;A</h2></div>
+      <details class="iv"><summary>What is the difference between an agent and a workflow in MAF?</summary><div class="a">An agent is a stateful, multi-turn unit (model + instructions + tools) that reasons and calls tools until it returns an answer. A workflow is a typed, directed graph of executors connected by edges that routes data deterministically. The LLM reasons inside a node; it doesn't control the overall path. An agent can be used as an executor inside a workflow.</div></details>
+      <details class="iv"><summary>Explain the superstep (Pregel/BSP) execution model.</summary><div class="a">Execution runs in discrete supersteps. In each superstep, every executor that has pending input runs in parallel; then a synchronization barrier waits for all of them to finish before the graph advances and routes the newly emitted messages. The practical consequence is that a fan-out doesn't progress until the slowest branch in the current step completes.</div></details>
+      <details class="iv"><summary>How do you do conditional routing between executors?</summary><div class="a">Attach a condition to an edge (add_edge with a condition lambda), or use a switch-case edge group with ordered Cases and a Default target. The default is a safety net that catches unexpected values, which matters for auditability.</div></details>
+      <details class="iv"><summary>Where do you put PII redaction and safety rules?</summary><div class="a">In middleware. MAF middleware wraps agent/function calls so you can inspect and rewrite messages before the model runs (block disallowed intents) and after it runs (redact PII from outputs). Layer this with Azure AI Content Safety filters and Foundry Control Plane guardrails for defense in depth.</div></details>
+      <details class="iv"><summary>How is human-in-the-loop implemented?</summary><div class="a">A node emits a request-info event; the workflow checkpoints and suspends, then resumes when your application sends the human's response back with the request id. Put it behind a conditional edge so only high-risk cases stop for approval, keeping the common path automated.</div></details>
+      <details class="iv"><summary>What's the risk with sensitive-data logging?</summary><div class="a">MAF only logs message content when explicitly enabled. At Trace level or with ENABLE_SENSITIVE_DATA=true, the full chat messages — including PII, function arguments, and results — are captured. These must stay off in production; leaving them on is a direct data-leak path.</div></details>
+      <details class="iv"><summary>What does the AI Red Teaming Agent do, and what is ASR?</summary><div class="a">It automates adversarial probing using Microsoft's PyRIT framework across risk categories (e.g., sensitive-data leakage, prohibited actions, hate/unfairness), applying attack strategies that can bypass a model's built-in alignment. It scores each attack/response pair to produce an Attack Success Rate — the fraction of attacks that succeeded — plus a scorecard you can gate a release on.</div></details>
+      <details class="iv"><summary>How does tracing work in MAF?</summary><div class="a">MAF has built-in OpenTelemetry instrumentation. You configure observability (e.g., an Application Insights connection string) and it emits spans for model calls, tool invocations, and agent decisions, giving one end-to-end timeline per task in Azure Monitor. Env vars ENABLE_INSTRUMENTATION, ENABLE_SENSITIVE_DATA, and ENABLE_CONSOLE_EXPORTERS control it.</div></details>
+      <details class="iv"><summary>What changes when you deploy to Foundry hosted agents?</summary><div class="a">Hosting takes only a couple of extra lines. On deploy, the agent receives its own Microsoft Entra identity, so every action is traceable back to that agent and runs under scoped permissions — the basis for governance and isolation at fleet scale.</div></details>
+      <details class="iv"><summary>How do you make deployment automated but safe?</summary><div class="a">Gate CI/CD on results: run the Azure AI Evaluation SDK and a red-team scan as pipeline steps, and only run the deploy step if metrics and ASR pass. After release, add continuous evaluation on sampled traffic, scheduled red teaming, and Azure Monitor alerts for drift and harmful output.</div></details>
+    </section>
+
+    <!-- ===== CHEAT SHEET ===== -->
+    <section id="cheat">
+      <div class="sec-head"><span class="tag d">C</span><h2>Cheat sheet</h2></div>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Goal</th><th>API / control</th></tr></thead>
+        <tbody>
+          <tr><td>Install</td><td><span class="chip">pip install agent-framework</span></td></tr>
+          <tr><td>Build the graph</td><td><span class="chip">WorkflowBuilder().set_start_executor(...).add_edge(...).build()</span></td></tr>
+          <tr><td>Run &amp; observe</td><td><span class="chip">workflow.run_stream(input)</span> → iterate events</td></tr>
+          <tr><td>Conditional route</td><td><span class="chip">add_edge(a, b, condition=...)</span> · <span class="chip">add_switch_case_edge_group</span></td></tr>
+          <tr><td>Parallel join</td><td><span class="chip">add_fan_in_edges([...], aggregator)</span></td></tr>
+          <tr><td>Safety / PII</td><td>middleware (pre-block + post-redact)</td></tr>
+          <tr><td>Human escalation</td><td><span class="chip">RequestInfoExecutor</span> + request-info event → resume</td></tr>
+          <tr><td>Automated tests</td><td><span class="chip">azure.ai.evaluation.evaluate(...)</span></td></tr>
+          <tr><td>Red-team</td><td><span class="chip">RedTeam(...).scan(...)</span> → ASR (PyRIT)</td></tr>
+          <tr><td>Tracing</td><td><span class="chip">setup_observability(...)</span> → App Insights</td></tr>
+          <tr><td>Deploy</td><td>Foundry hosted agent + Entra identity</td></tr>
+          <tr><td>Operate</td><td>continuous eval · scheduled red-team · Monitor alerts · Control Plane</td></tr>
+        </tbody>
+      </table></div>
+      <footer>Microsoft Agent Framework tutorial (V6 format). MAF 1.0 GA reached April 2026; features and exact APIs evolve — verify code against learn.microsoft.com/agent-framework and github.com/microsoft/agent-framework. Prepared as classroom material.</footer>
+    </section>
+  </main>
+</div>
+
+<script>
+const store = {
+  get(k,d){ try{ const v=localStorage.getItem(k); return v===null?d:JSON.parse(v);}catch(e){return d;} },
+  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+};
+
+/* theme */
+(function(){
+  const root=document.documentElement, btn=document.getElementById('themeBtn');
+  const s=store.get('maf-theme','dark'); root.setAttribute('data-theme',s);
+  btn.onclick=()=>{ const n=root.getAttribute('data-theme')==='dark'?'light':'dark';
+    root.setAttribute('data-theme',n); store.set('maf-theme',n); };
+})();
+
+/* copy */
+document.querySelectorAll('.code .copy').forEach(b=>{
+  b.onclick=()=>{ const t=b.closest('.code').querySelector('code').innerText;
+    navigator.clipboard.writeText(t).then(()=>{ const o=b.textContent; b.textContent='Copied ✓';
+      setTimeout(()=>b.textContent=o,1300); }); };
+});
+
+/* progress */
+const SECTIONS=['s0','s1','s2','s3','s4'];
+let done=new Set(store.get('maf-done',[]));
+function renderProgress(){
+  document.querySelectorAll('.markbtn').forEach(btn=>{
+    const id=btn.dataset.sec;
+    if(done.has(id)){ btn.classList.add('done'); btn.textContent='✓ Completed'; }
+    else{ btn.classList.remove('done'); btn.textContent='Mark section complete'; }
+  });
+  document.querySelectorAll('#toc a').forEach(a=>{
+    const id=a.getAttribute('href').slice(1);
+    a.classList.toggle('done', done.has(id));
+  });
+  const pct=Math.round(done.size/SECTIONS.length*100);
+  document.getElementById('fill').style.width=pct+'%';
+  document.getElementById('progLab').textContent=`${done.size} / ${SECTIONS.length} sections complete`;
+}
+document.querySelectorAll('.markbtn').forEach(btn=>{
+  btn.onclick=()=>{ const id=btn.dataset.sec;
+    if(done.has(id)) done.delete(id); else done.add(id);
+    store.set('maf-done',[...done]); renderProgress(); };
+});
+renderProgress();
+
+/* scrollspy */
+const links=[...document.querySelectorAll('#toc a')];
+const obs=new IntersectionObserver(es=>{
+  es.forEach(e=>{ if(e.isIntersecting){
+    links.forEach(l=>l.classList.toggle('active', l.getAttribute('href')==='#'+e.target.id));
+  }});
+},{rootMargin:'-45% 0px -50% 0px'});
+document.querySelectorAll('section[id]').forEach(s=>obs.observe(s));
+
+/* ---- quiz + exam data ---- */
+const QUIZ=[
+  {q:"In a MAF workflow, what activates an executor?",o:["A timer tick","Its input messages being ready on an incoming edge","A manual API call per node","The LLM deciding to run it"],a:1,e:"Workflows are data-flow graphs: an executor runs when its inputs arrive along its edges."},
+  {q:"Who owns the topology and guardrails of a workflow?",o:["The LLM at runtime","The developer","The Foundry scheduler","The end user"],a:1,e:"The developer defines the graph and guardrails; agents make only the routing decisions they're allowed to."},
+  {q:"Where is the right place to redact PII from agent output?",o:["Inside the model prompt","In middleware wrapping the agent call","In the CI pipeline only","In the TOC"],a:1,e:"Middleware can inspect/rewrite messages after the agent runs — the natural home for redaction."},
+  {q:"How does a workflow pause for a human decision?",o:["It crashes and restarts","A node emits a request-info event and the workflow checkpoints/suspends","It polls a database forever","It is impossible in MAF"],a:1,e:"Request-info events suspend the graph; it resumes when your app sends the response back."},
+  {q:"What does the AI Red Teaming Agent produce?",o:["A UML diagram","An Attack Success Rate and a risk scorecard","A cost estimate","A container image"],a:1,e:"It uses PyRIT to probe the system and scores attack/response pairs into an ASR and scorecard."},
+  {q:"Which setting must stay OFF in production?",o:["ENABLE_INSTRUMENTATION","ENABLE_SENSITIVE_DATA","Managed identity","OpenTelemetry"],a:1,e:"ENABLE_SENSITIVE_DATA (and Trace-level logging) captures full messages including PII."},
+];
+const EXAM=[
+  {q:"Which builder call finalises an immutable workflow?",o:[".compile()",".build()",".freeze()",".run()"],a:1,e:".build() validates executors/edges and returns the immutable Workflow."},
+  {q:"A switch-case edge group should include a…",o:["Retry count","Default target","Timeout","Second start node"],a:1,e:"A Default catches unexpected values — a safety net for routing."},
+  {q:"Agents used as graph nodes are…",o:["Not allowed","Executors","Edges","Events"],a:1,e:"An agent is a type of executor and can be wired directly into the graph."},
+  {q:"The synchronization barrier means a fan-out advances only when…",o:["The first branch finishes","Every triggered executor in the superstep finishes","A human approves","The timer expires"],a:1,e:"BSP supersteps wait for all parallel executors before advancing."},
+  {q:"Defense-in-depth for safety combines middleware with…",o:["Only unit tests","Content Safety filters and Foundry Control Plane guardrails","A bigger model","Disabling tools"],a:1,e:"Layer code middleware, model-level content safety, and fleet-level guardrails."},
+  {q:"Automated functional testing of the graph uses…",o:["The Azure AI Evaluation SDK","A spreadsheet","Manual QA only","The DevUI exclusively"],a:0,e:"evaluate(...) scores against a labelled dataset and can gate CI."},
+  {q:"On deploy to Foundry hosted agents, each agent receives…",o:["A random UUID only","Its own Microsoft Entra identity","No identity","A shared team key"],a:1,e:"An Entra identity makes every action traceable and scoped."},
+  {q:"Which is a POST-deployment safety practice?",o:["Deleting traces","Scheduled red teaming on production","Turning off monitoring","Enabling sensitive logging"],a:1,e:"Scheduled red teaming plus continuous eval and alerts keep production safe."},
+];
+
+function renderQ(list,box,prefix){
+  box.innerHTML=list.map((item,i)=>`
+    <div class="q" data-i="${i}">
+      <div class="qt"><span class="qn">${prefix}${i+1}</span>${item.q}</div>
+      ${item.o.map((opt,j)=>`
+        <label class="opt"><input type="radio" name="${prefix}${i}" value="${j}">${opt}</label>`).join('')}
+      <div class="exp">${item.e}</div>
+    </div>`).join('');
+}
+function grade(list,box){
+  let score=0;
+  box.querySelectorAll('.q').forEach((qEl,i)=>{
+    const chosen=qEl.querySelector('input:checked');
+    const opts=qEl.querySelectorAll('.opt');
+    opts.forEach(o=>o.classList.remove('correct','wrong'));
+    opts[list[i].a].classList.add('correct');
+    if(chosen){ const v=+chosen.value;
+      if(v===list[i].a) score++; else opts[v].classList.add('wrong'); }
+    qEl.querySelector('.exp').classList.add('show');
+  });
+  return score;
+}
+
+/* quiz */
+const quizBox=document.getElementById('quizBox');
+renderQ(QUIZ,quizBox,'Q');
+const quizBest=store.get('maf-quiz-best',null);
+if(quizBest!==null) document.getElementById('quizScore').textContent=`Best: ${quizBest}/${QUIZ.length}`;
+document.getElementById('quizCheck').onclick=()=>{
+  const s=grade(QUIZ,quizBox);
+  const best=Math.max(s, store.get('maf-quiz-best',0)); store.set('maf-quiz-best',best);
+  document.getElementById('quizScore').textContent=`Score: ${s}/${QUIZ.length}  ·  Best: ${best}/${QUIZ.length}`;
+};
+document.getElementById('quizReset').onclick=()=>{ renderQ(QUIZ,quizBox,'Q');
+  document.getElementById('quizScore').textContent=''; };
+
+/* exam */
+const examBox=document.getElementById('examBox');
+const examBestEl=document.getElementById('examBest');
+const eb=store.get('maf-exam-best',null);
+if(eb!==null) examBestEl.textContent=`Best: ${eb}/${EXAM.length}`;
+let examTimer=null, examLeft=360;
+function fmt(s){ const m=String(Math.floor(s/60)).padStart(2,'0'), q=String(s%60).padStart(2,'0'); return `${m}:${q}`; }
+document.getElementById('examStart').onclick=()=>{
+  renderQ(EXAM,examBox,'E');
+  examBox.style.display='block';
+  document.getElementById('examSubmitRow').style.display='flex';
+  document.getElementById('examStart').style.display='none';
+  const t=document.getElementById('examTimer'); t.style.display='inline-block';
+  examLeft=360; t.textContent=fmt(examLeft); t.classList.remove('warn');
+  examTimer=setInterval(()=>{
+    examLeft--; t.textContent=fmt(examLeft);
+    if(examLeft<=60) t.classList.add('warn');
+    if(examLeft<=0){ clearInterval(examTimer); submitExam(); }
+  },1000);
+};
+function submitExam(){
+  clearInterval(examTimer);
+  document.getElementById('examTimer').style.display='none';
+  const s=grade(EXAM,examBox);
+  const best=Math.max(s, store.get('maf-exam-best',0)); store.set('maf-exam-best',best);
+  document.getElementById('examScore').textContent=`Score: ${s}/${EXAM.length}`;
+  examBestEl.textContent=`Best: ${best}/${EXAM.length}`;
+  document.getElementById('examSubmit').style.display='none';
+}
+document.getElementById('examSubmit').onclick=submitExam;
+</script>
+</body>
+</html>
